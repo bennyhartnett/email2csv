@@ -1,0 +1,84 @@
+project:
+  name: "H2H IQX Pipeline"
+  environment: "dev"
+
+paths:
+  # Root folder that contains month subfolders
+  input_root: "/path/to/VetTalents"
+  # Where to write combined Excel, CSV, and QA reports
+  output_root: "/path/to/VetTalents/output"
+  # Where logs should go (relative to project root)
+  log_dir: "logs"
+
+run:
+  # The month to process; CLI can override this
+  current_month: "2025-12"
+  previous_month: "2025-11"
+
+combo_files:
+  excel_pattern: "Combo H2H IBEW 4 8 9 Iron {date}.xlsx"
+  csv_pattern: "Bulk Import H2H Combo IBEW 4 8 9 Iron {date}.csv"
+
+date_handling:
+  # Strategy for determining last import cutoff:
+  # "from_combo_file" or "from_config"
+  last_import_strategy: "from_combo_file"
+  # Only used if strategy is "from_config"
+  last_import_date_by_source:
+    "IBEW D4": "2025-11-20"
+    "IBEW D8": "2025-11-20"
+    "IBEW D9": "2025-11-20"
+    "Ironworkers": "2025-11-20"
+  timezone: "US/Eastern"
+
+sources:
+  - name: "IBEW D4"
+    code: "IBEW_4"
+    # Glob or regex used to find files for this source in the month folder
+    file_pattern: "IBEW D4 *.xlsx"
+  - name: "IBEW D8"
+    code: "IBEW_8"
+    file_pattern: "IBEW D8 *.xlsx"
+  - name: "IBEW D9"
+    code: "IBEW_9"
+    file_pattern: "IBEW D9 *.xlsx"
+  - name: "Ironworkers"
+    code: "IRON"
+    file_pattern: "Ironworkers *.xlsx"
+
+mappings:
+  professions: "config/mappings/professions.yml"
+  service_branches: "config/mappings/service_branches.yml"
+  source_priority: "config/mappings/source_priority.yml"
+
+iqx_import:
+  # Column order required by IQX bulk import CSV
+  column_order:
+    - "External ID"
+    - "External Source"
+    - "Invited"
+    - "Source"
+    - "Internal Comments"
+    - "Last Name"
+    - "First Name"
+    - "Phone"
+    - "Email"
+    - "Zip"
+    - "Profession"
+    - "Date Available"
+    - "End Date"
+    - "Location Radius"
+    - "Trade"
+    - "Union Code"
+    - "Pay Scale"
+
+defaults:
+  invited_flag: "I"
+  location_radius_miles: 100
+  trade: "Electricians"
+  union_code: "22 Utilities"
+  pay_scale: "A"
+  # Offset in days from run date for 'Date Available'
+  date_available_offset_days: 1
+  # Years after 'Date Available' for 'End Date'
+  end_date_years_from_available: 1
