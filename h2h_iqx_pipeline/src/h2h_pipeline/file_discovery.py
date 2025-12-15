@@ -15,6 +15,7 @@ def discover_month_files(
     """Locate the month directory, source files, and prior Combo file."""
     month_dir = _find_month_dir(input_root, month)
     sources: Dict[str, Path] = {}
+    missing_sources: list[str] = []
 
     if month_dir:
         for source_cfg in config.get("sources", []):
@@ -27,6 +28,7 @@ def discover_month_files(
                 sources[name] = matches[0]
             else:
                 logger.warning("No files found for source %s with pattern %s", name, pattern)
+                missing_sources.append(name)
     else:
         logger.warning("No month directory found for %s under %s", month, input_root)
 
@@ -44,6 +46,8 @@ def discover_month_files(
         month_dir=month_dir,
         sources=sources,
         previous_combo=previous_combo,
+        missing_sources=missing_sources,
+        month_dir_missing=month_dir is None,
     )
 
 

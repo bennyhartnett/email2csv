@@ -14,6 +14,8 @@ class DiscoveryResult:
     month_dir: Optional[Path] = None
     sources: Optional[Mapping[str, Path]] = None
     previous_combo: Optional[Path] = None
+    missing_sources: List[str] = field(default_factory=list)
+    month_dir_missing: bool = False
 
 
 @dataclass

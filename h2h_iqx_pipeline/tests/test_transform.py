@@ -102,5 +102,5 @@ def test_transform_reports_missing_and_invalid(tmp_path):
 
     assert "Unknown" in result.validation.missing_profession_mappings
     assert "Space Force" in result.validation.missing_service_branch_mappings
-    assert "12345" in result.validation.invalid_phones
-    assert "12" in result.validation.invalid_zips
+    assert "0:12345" in result.validation.invalid_phones
+    assert "0:12" in result.validation.invalid_zips

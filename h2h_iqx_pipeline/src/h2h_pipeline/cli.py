@@ -38,13 +38,15 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
-    config = load_config(args.config)
-
-    run_pipeline(
-        month=args.month,
-        input_root=args.input_root,
-        config=config,
-    )
+    try:
+        config = load_config(args.config)
+        run_pipeline(
+            month=args.month,
+            input_root=args.input_root,
+            config=config,
+        )
+    except Exception as exc:  # pragma: no cover - CLI guard
+        parser.error(str(exc))
 
 
 if __name__ == "__main__":

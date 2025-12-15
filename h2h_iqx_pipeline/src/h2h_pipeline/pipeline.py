@@ -42,5 +42,14 @@ def run_pipeline(month: str, input_root: Path, config: Mapping[str, Any]) -> Non
         dedup_result=dedup_result,
         export_paths=export_paths,
         validation=transform_result.validation,
+        discovery=discovery,
+        counts_before=_counts_by_source(combo_df),
+        counts_after=_counts_by_source(dedup_result.cleaned_df),
         config=config,
     )
+
+
+def _counts_by_source(df):
+    if "Source" not in df.columns:
+        return {}
+    return df["Source"].value_counts().to_dict()

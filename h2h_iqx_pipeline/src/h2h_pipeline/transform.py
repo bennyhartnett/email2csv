@@ -37,12 +37,8 @@ def build_combo(month: str, raw_data: Dict[str, pd.DataFrame], config: Mapping[s
     # Normalize key fields
     combined["Email"] = combined.get("Email", pd.Series(dtype=str)).fillna("").str.strip().str.lower()
 
-    combined["Phone"] = combined.get("Phone", pd.Series(dtype=str)).fillna("").astype(str).apply(
-        lambda v: _format_phone(v, validation)
-    )
-    combined["Zip"] = combined.get("Zip", pd.Series(dtype=str)).fillna("").astype(str).apply(
-        lambda v: _format_zip(v, validation)
-    )
+    combined["Phone"] = _format_phone_series(combined.get("Phone", pd.Series(dtype=str)).fillna(""), validation)
+    combined["Zip"] = _format_zip_series(combined.get("Zip", pd.Series(dtype=str)).fillna(""), validation)
     combined["Profession"] = combined.get("Profession", pd.Series(dtype=str)).fillna("").map(
         _mapper_with_tracking(mappings.get("professions", {}), validation.missing_profession_mappings)
     )
@@ -122,30 +118,35 @@ def _mapper_with_tracking(mapping: Dict[str, str], missing_set: Set[str]):
     return mapper
 
 
-def _format_phone(value: Any, validation: ValidationReport) -> str:
-    raw = str(value)
-    digits = "".join(ch for ch in raw if ch.isdigit())
-    if len(digits) == 11 and digits.startswith("1"):
-        digits = digits[1:]
-    if len(digits) == 10:
-        return f"{digits[0:3]}-{digits[3:6]}-{digits[6:10]}"
-    if digits:
-        validation.invalid_phones.append(raw)
-    return digits
+def _format_phone_series(series: pd.Series, validation: ValidationReport) -> pd.Series:
+    formatted = []
+    for idx, raw in series.items():
+        digits = "".join(ch for ch in str(raw) if ch.isdigit())
+        if len(digits) == 11 and digits.startswith("1"):
+            digits = digits[1:]
+        if len(digits) == 10:
+            formatted.append(f"{digits[0:3]}-{digits[3:6]}-{digits[6:10]}")
+        else:
+            formatted.append(digits)
+            if digits:
+                validation.invalid_phones.append(f"{idx}:{raw}")
+    return pd.Series(formatted, index=series.index)
 
 
-def _format_zip(value: Any, validation: ValidationReport) -> str:
-    raw = str(value)
-    digits = "".join(ch for ch in raw if ch.isdigit())
-    if len(digits) >= 5:
-        formatted = digits[:5]
-    elif len(digits) > 0:
-        formatted = digits.zfill(5)
-    else:
-        formatted = ""
-    if digits and len(digits) != 5:
-        validation.invalid_zips.append(raw)
-    return formatted
+def _format_zip_series(series: pd.Series, validation: ValidationReport) -> pd.Series:
+    formatted = []
+    for idx, raw in series.items():
+        digits = "".join(ch for ch in str(raw) if ch.isdigit())
+        if len(digits) >= 5:
+            formatted_zip = digits[:5]
+        elif len(digits) > 0:
+            formatted_zip = digits.zfill(5)
+        else:
+            formatted_zip = ""
+        formatted.append(formatted_zip)
+        if digits and len(digits) != 5:
+            validation.invalid_zips.append(f"{idx}:{raw}")
+    return pd.Series(formatted, index=series.index)
 
 
 def _compute_dates(month: str, defaults: Mapping[str, Any]) -> tuple[str, str]:
