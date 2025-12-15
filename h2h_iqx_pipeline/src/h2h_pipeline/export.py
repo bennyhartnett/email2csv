@@ -20,6 +20,10 @@ def write_outputs(
     output_root = Path(paths_cfg.get("output_root", "output"))
     output_root.mkdir(parents=True, exist_ok=True)
 
+    column_order = config.get("iqx_import", {}).get("column_order", [])
+    combo_df = _reorder_columns(combo_df, column_order)
+    dedup_df = _reorder_columns(dedup_df, column_order)
+
     combo_pattern = config.get("combo_files", {}).get("excel_pattern", "Combo {date}.xlsx")
     combo_excel = output_root / combo_pattern.format(date=month)
 
@@ -33,6 +37,17 @@ def write_outputs(
     _safe_write_csv(dedup_df, iqx_csv, "IQX CSV")
 
     return {"combo_excel": combo_excel, "dedup_excel": dedup_excel, "iqx_csv": iqx_csv}
+
+
+def _reorder_columns(df: pd.DataFrame, column_order: list[str]) -> pd.DataFrame:
+    if not column_order:
+        return df
+    out = df.copy()
+    for col in column_order:
+        if col not in out.columns:
+            out[col] = pd.NA
+    extra = [c for c in out.columns if c not in column_order]
+    return out[column_order + extra]
 
 
 def _safe_write_excel(df: pd.DataFrame, path: Path, label: str) -> None:

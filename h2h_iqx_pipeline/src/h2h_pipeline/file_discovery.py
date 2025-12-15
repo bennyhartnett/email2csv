@@ -12,27 +12,23 @@ logger = logging.getLogger(__name__)
 def discover_month_files(
     month: str, input_root: Path, config: Mapping[str, Any]
 ) -> DiscoveryResult:
-    """Locate the month directory, source files, and prior Combo file.
-
-    This is a lightweight placeholder that favors clarity over completeness.
-    """
-    month_dir = Path(input_root) / month
+    """Locate the month directory, source files, and prior Combo file."""
+    month_dir = _find_month_dir(input_root, month)
     sources: Dict[str, Path] = {}
 
-    if month_dir.exists():
+    if month_dir:
         for source_cfg in config.get("sources", []):
             pattern = source_cfg.get("file_pattern")
             name = source_cfg.get("name")
             if not pattern or not name:
                 continue
-            matches = list(month_dir.glob(pattern))
+            matches = sorted(month_dir.glob(pattern))
             if matches:
-                # If multiple matches, keep the first for now
                 sources[name] = matches[0]
             else:
                 logger.warning("No files found for source %s with pattern %s", name, pattern)
     else:
-        logger.warning("Month directory %s does not exist", month_dir)
+        logger.warning("No month directory found for %s under %s", month, input_root)
 
     previous_combo = _find_previous_combo(input_root, config)
 
@@ -45,10 +41,25 @@ def discover_month_files(
     return DiscoveryResult(
         month=month,
         input_root=input_root,
-        month_dir=month_dir if month_dir.exists() else None,
+        month_dir=month_dir,
         sources=sources,
         previous_combo=previous_combo,
     )
+
+
+def _find_month_dir(input_root: Path, month: str) -> Path | None:
+    """Find a month directory, supporting common folder naming conventions."""
+    candidates = [
+        input_root / month,
+        input_root / f"Vet Talents {month}",
+        input_root / f"ORIG - Vet Talents {month}",
+    ]
+    candidates.extend(sorted(p for p in input_root.glob(f"*{month}*") if p.is_dir()))
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _find_previous_combo(input_root: Path, config: Mapping[str, Any]) -> Path | None:
@@ -58,12 +69,12 @@ def _find_previous_combo(input_root: Path, config: Mapping[str, Any]) -> Path | 
     if not prev_month:
         return None
 
-    prev_dir = Path(input_root) / prev_month
-    if not prev_dir.exists():
+    prev_dir = _find_month_dir(input_root, prev_month)
+    if not prev_dir:
         return None
 
     patterns = [
-        config.get("combo_files", {}).get("excel_pattern", ""),
+        config.get("combo_files", {}).get("excel_pattern", "").format(date=prev_month),
         "*Combo*.xlsx",
     ]
     for pattern in patterns:

@@ -9,43 +9,90 @@ from .models import DiscoveryResult
 
 logger = logging.getLogger(__name__)
 
+# Maps normalized column tokens to canonical names
+CANONICAL_COLUMN_MAP = {
+    "last name": "Last Name",
+    "lastname": "Last Name",
+    "last_name": "Last Name",
+    "first name": "First Name",
+    "firstname": "First Name",
+    "first_name": "First Name",
+    "email": "Email",
+    "email address": "Email",
+    "email_address": "Email",
+    "phone": "Phone",
+    "phone number": "Phone",
+    "phone_number": "Phone",
+    "zip": "Zip",
+    "zipcode": "Zip",
+    "postal": "Zip",
+    "profession": "Profession",
+    "service branch": "Service Branch",
+    "service": "Service Branch",
+    "source": "Source",
+}
+
 
 def load_sources(
     discovery: DiscoveryResult, config: Mapping[str, Any]
 ) -> Dict[str, pd.DataFrame]:
-    """Load source Excel files into DataFrames.
-
-    This placeholder ingests available files and falls back to empty frames when
-    nothing is found, keeping the pipeline runnable while implementation is
-    fleshed out.
-    """
+    """Load source Excel files into DataFrames."""
     frames: Dict[str, pd.DataFrame] = {}
-    column_order = config.get("iqx_import", {}).get("column_order", [])
 
     if discovery.sources:
         for source_name, path in discovery.sources.items():
-            frames[source_name] = _read_excel(path, column_order)
+            code = _lookup_source_code(source_name, config)
+            frames[source_name] = _read_and_normalize(path, source_name, code)
     else:
         logger.warning("No source files discovered; continuing with empty data.")
 
     if discovery.previous_combo:
-        frames["_previous_combo"] = _read_excel(discovery.previous_combo, column_order)
+        frames["_previous_combo"] = _read_and_normalize(discovery.previous_combo, "Previous Combo", None)
 
     return frames
 
 
-def _read_excel(path: Path, columns: Any) -> pd.DataFrame:
+def _lookup_source_code(source_name: str, config: Mapping[str, Any]) -> str | None:
+    for entry in config.get("sources", []):
+        if entry.get("name") == source_name:
+            return entry.get("code")
+    return None
+
+
+def _read_and_normalize(path: Path, source_name: str, source_code: str | None) -> pd.DataFrame:
     if not path.exists():
         logger.warning("Expected source file missing: %s", path)
-        return _empty_df(columns)
+        return _empty_df()
     try:
-        df = pd.read_excel(path)
-        return df
-    except Exception as exc:  # pragma: no cover - placeholder
+        df = pd.read_excel(path, dtype=str)
+    except Exception as exc:  # pragma: no cover - safety
         logger.error("Failed to read %s: %s", path, exc)
-        return _empty_df(columns)
+        return _empty_df()
+
+    df = _normalize_columns(df)
+
+    # Add metadata columns
+    df["Source"] = source_name
+    if source_code:
+        df["External Source"] = source_code
+
+    # Drop rows with no identifiers
+    df = df.dropna(how="all")
+    return df
 
 
-def _empty_df(columns: Any) -> pd.DataFrame:
-    cols = list(columns) if columns else []
-    return pd.DataFrame(columns=cols)
+def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    renamed: Dict[str, str] = {}
+    for col in df.columns:
+        key = _normalize_token(col)
+        canonical = CANONICAL_COLUMN_MAP.get(key, col)
+        renamed[col] = canonical
+    return df.rename(columns=renamed)
+
+
+def _normalize_token(text: str) -> str:
+    return text.strip().lower().replace("-", " ").replace("_", " ")
+
+
+def _empty_df() -> pd.DataFrame:
+    return pd.DataFrame()
