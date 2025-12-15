@@ -21,7 +21,8 @@ def run_pipeline(month: str, input_root: Path, config: Mapping[str, Any]) -> Non
     raw_data = ingestion.load_sources(discovery, config=config)
 
     # 3. Transform and standardize into "Combo All Lists" equivalent
-    combo_df = transform.build_combo(month=month, raw_data=raw_data, config=config)
+    transform_result = transform.build_combo(month=month, raw_data=raw_data, config=config)
+    combo_df = transform_result.combo_df
 
     # 4. De-duplicate and create "Combo Dups Removed"
     dedup_result = dedup.remove_duplicates(combo_df, config=config)
@@ -40,5 +41,6 @@ def run_pipeline(month: str, input_root: Path, config: Mapping[str, Any]) -> Non
         combo_df=combo_df,
         dedup_result=dedup_result,
         export_paths=export_paths,
+        validation=transform_result.validation,
         config=config,
     )

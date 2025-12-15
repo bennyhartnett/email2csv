@@ -1,42 +1,53 @@
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, Set
 
 import logging
 import pandas as pd
 import yaml
 from dateutil.relativedelta import relativedelta
 
+from .models import TransformResult, ValidationReport
 from .utils.dates import parse_month
 
 logger = logging.getLogger(__name__)
 
+REQUIRED_COLUMNS = ["Last Name", "First Name", "Email", "Phone", "Zip", "Profession", "Service Branch"]
 
-def build_combo(month: str, raw_data: Dict[str, pd.DataFrame], config: Mapping[str, Any]) -> pd.DataFrame:
+
+def build_combo(month: str, raw_data: Dict[str, pd.DataFrame], config: Mapping[str, Any]) -> TransformResult:
     """Transform raw source frames into a unified Combo DataFrame."""
     column_order = config.get("iqx_import", {}).get("column_order", [])
     defaults = config.get("defaults", {})
     mappings = _load_mappings(config)
+
+    validation = ValidationReport()
 
     frames = [
         df for name, df in raw_data.items() if not name.startswith("_previous_combo")
     ]
     if not frames:
         logger.warning("No source frames to combine; returning empty Combo.")
-        return pd.DataFrame(columns=column_order)
+        empty_df = pd.DataFrame(columns=column_order)
+        return TransformResult(combo_df=empty_df, validation=validation)
 
     combined = pd.concat(frames, ignore_index=True, sort=False)
     combined = combined.copy()
 
     # Normalize key fields
     combined["Email"] = combined.get("Email", pd.Series(dtype=str)).fillna("").str.strip().str.lower()
-    combined["Phone"] = combined.get("Phone", pd.Series(dtype=str)).fillna("").astype(str).apply(_format_phone)
-    combined["Zip"] = combined.get("Zip", pd.Series(dtype=str)).fillna("").astype(str).apply(_format_zip)
+
+    combined["Phone"] = combined.get("Phone", pd.Series(dtype=str)).fillna("").astype(str).apply(
+        lambda v: _format_phone(v, validation)
+    )
+    combined["Zip"] = combined.get("Zip", pd.Series(dtype=str)).fillna("").astype(str).apply(
+        lambda v: _format_zip(v, validation)
+    )
     combined["Profession"] = combined.get("Profession", pd.Series(dtype=str)).fillna("").map(
-        lambda v: _apply_mapping(v, mappings.get("professions", {}))
+        _mapper_with_tracking(mappings.get("professions", {}), validation.missing_profession_mappings)
     )
     combined["Service Branch"] = combined.get("Service Branch", pd.Series(dtype=str)).fillna("").map(
-        lambda v: _apply_mapping(v, mappings.get("service_branches", {}))
+        _mapper_with_tracking(mappings.get("service_branches", {}), validation.missing_service_branch_mappings)
     )
 
     # Defaults and computed dates
@@ -63,6 +74,10 @@ def build_combo(month: str, raw_data: Dict[str, pd.DataFrame], config: Mapping[s
         (combined["Email"].astype(str).str.len() > 0) | (combined["Phone"].astype(str).str.len() > 0)
     ]
 
+    validation.missing_required_columns = {
+        col for col in REQUIRED_COLUMNS if col not in combined.columns
+    }
+
     # Ensure expected columns exist, even if empty
     for col in column_order:
         if col not in combined.columns:
@@ -73,7 +88,7 @@ def build_combo(month: str, raw_data: Dict[str, pd.DataFrame], config: Mapping[s
     combined = combined[ordered_cols]
 
     logger.info("Built Combo frame with %s rows and %s columns", len(combined), len(combined.columns))
-    return combined
+    return TransformResult(combo_df=combined, validation=validation)
 
 
 def _load_mappings(config: Mapping[str, Any]) -> Dict[str, Dict[str, str]]:
@@ -94,27 +109,43 @@ def _load_mappings(config: Mapping[str, Any]) -> Dict[str, Dict[str, str]]:
     return result
 
 
-def _apply_mapping(raw: Any, mapping: Dict[str, str]) -> str:
-    key = str(raw).strip()
-    return mapping.get(key, key)
+def _mapper_with_tracking(mapping: Dict[str, str], missing_set: Set[str]):
+    def mapper(raw: Any) -> str:
+        key = str(raw).strip()
+        if not key:
+            return ""
+        if key in mapping:
+            return mapping[key]
+        missing_set.add(key)
+        return key
+
+    return mapper
 
 
-def _format_phone(value: Any) -> str:
-    digits = "".join(ch for ch in str(value) if ch.isdigit())
+def _format_phone(value: Any, validation: ValidationReport) -> str:
+    raw = str(value)
+    digits = "".join(ch for ch in raw if ch.isdigit())
     if len(digits) == 11 and digits.startswith("1"):
         digits = digits[1:]
     if len(digits) == 10:
         return f"{digits[0:3]}-{digits[3:6]}-{digits[6:10]}"
+    if digits:
+        validation.invalid_phones.append(raw)
     return digits
 
 
-def _format_zip(value: Any) -> str:
-    digits = "".join(ch for ch in str(value) if ch.isdigit())
+def _format_zip(value: Any, validation: ValidationReport) -> str:
+    raw = str(value)
+    digits = "".join(ch for ch in raw if ch.isdigit())
     if len(digits) >= 5:
-        return digits[:5]
-    if len(digits) > 0:
-        return digits.zfill(5)
-    return ""
+        formatted = digits[:5]
+    elif len(digits) > 0:
+        formatted = digits.zfill(5)
+    else:
+        formatted = ""
+    if digits and len(digits) != 5:
+        validation.invalid_zips.append(raw)
+    return formatted
 
 
 def _compute_dates(month: str, defaults: Mapping[str, Any]) -> tuple[str, str]:
