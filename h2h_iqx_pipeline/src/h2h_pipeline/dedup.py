@@ -54,8 +54,12 @@ def remove_duplicates(combo_df: pd.DataFrame, config: Mapping[str, Any]) -> Dedu
                 seen[key_name].add(key_val)
         kept_rows.append(row)
 
-    cleaned_df = pd.DataFrame(kept_rows).drop(columns=["_priority", "_norm_email", "_norm_phone", "_norm_name_zip"])
-    duplicates_df = pd.DataFrame(duplicate_rows).drop(columns=["_priority", "_norm_email", "_norm_phone", "_norm_name_zip"])
+    cleaned_df = pd.DataFrame(kept_rows).drop(
+        columns=["_priority", "_norm_email", "_norm_phone", "_norm_name_zip"], errors="ignore"
+    )
+    duplicates_df = pd.DataFrame(duplicate_rows).drop(
+        columns=["_priority", "_norm_email", "_norm_phone", "_norm_name_zip"], errors="ignore"
+    )
 
     stats = {
         "input_rows": len(combo_df),
