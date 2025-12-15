@@ -7,12 +7,29 @@ import pandas as pd
 import yaml
 from dateutil.relativedelta import relativedelta
 
+from .constants import (
+    EMAIL_COLUMN,
+    FIRST_NAME_COLUMN,
+    LAST_NAME_COLUMN,
+    PHONE_COLUMN,
+    PROFESSION_COLUMN,
+    SERVICE_BRANCH_COLUMN,
+    ZIP_COLUMN,
+)
 from .models import TransformResult, ValidationReport
 from .utils.dates import parse_month
 
 logger = logging.getLogger(__name__)
 
-REQUIRED_COLUMNS = ["Last Name", "First Name", "Email", "Phone", "Zip", "Profession", "Service Branch"]
+REQUIRED_COLUMNS = [
+    LAST_NAME_COLUMN,
+    FIRST_NAME_COLUMN,
+    EMAIL_COLUMN,
+    PHONE_COLUMN,
+    ZIP_COLUMN,
+    PROFESSION_COLUMN,
+    SERVICE_BRANCH_COLUMN,
+]
 
 
 def build_combo(month: str, raw_data: Dict[str, pd.DataFrame], config: Mapping[str, Any]) -> TransformResult:
@@ -35,14 +52,14 @@ def build_combo(month: str, raw_data: Dict[str, pd.DataFrame], config: Mapping[s
     combined = combined.copy()
 
     # Normalize key fields
-    combined["Email"] = combined.get("Email", pd.Series(dtype=str)).fillna("").str.strip().str.lower()
+    combined[EMAIL_COLUMN] = combined.get(EMAIL_COLUMN, pd.Series(dtype=str)).fillna("").str.strip().str.lower()
 
-    combined["Phone"] = _format_phone_series(combined.get("Phone", pd.Series(dtype=str)).fillna(""), validation)
-    combined["Zip"] = _format_zip_series(combined.get("Zip", pd.Series(dtype=str)).fillna(""), validation)
-    combined["Profession"] = combined.get("Profession", pd.Series(dtype=str)).fillna("").map(
+    combined[PHONE_COLUMN] = _format_phone_series(combined.get(PHONE_COLUMN, pd.Series(dtype=str)).fillna(""), validation)
+    combined[ZIP_COLUMN] = _format_zip_series(combined.get(ZIP_COLUMN, pd.Series(dtype=str)).fillna(""), validation)
+    combined[PROFESSION_COLUMN] = combined.get(PROFESSION_COLUMN, pd.Series(dtype=str)).fillna("").map(
         _mapper_with_tracking(mappings.get("professions", {}), validation.missing_profession_mappings)
     )
-    combined["Service Branch"] = combined.get("Service Branch", pd.Series(dtype=str)).fillna("").map(
+    combined[SERVICE_BRANCH_COLUMN] = combined.get(SERVICE_BRANCH_COLUMN, pd.Series(dtype=str)).fillna("").map(
         _mapper_with_tracking(mappings.get("service_branches", {}), validation.missing_service_branch_mappings)
     )
 
@@ -58,16 +75,16 @@ def build_combo(month: str, raw_data: Dict[str, pd.DataFrame], config: Mapping[s
     combined["End Date"] = end_date
 
     # Internal comments derived from service branch when available
-    combined["Internal Comments"] = combined["Service Branch"]
+    combined["Internal Comments"] = combined[SERVICE_BRANCH_COLUMN]
 
     # Build External ID (prefer email then phone)
-    combined["External ID"] = combined["Email"]
+    combined["External ID"] = combined[EMAIL_COLUMN]
     mask_missing_id = combined["External ID"] == ""
-    combined.loc[mask_missing_id, "External ID"] = combined.loc[mask_missing_id, "Phone"]
+    combined.loc[mask_missing_id, "External ID"] = combined.loc[mask_missing_id, PHONE_COLUMN]
 
     # Drop rows missing both email and phone
     combined = combined[
-        (combined["Email"].astype(str).str.len() > 0) | (combined["Phone"].astype(str).str.len() > 0)
+        (combined[EMAIL_COLUMN].astype(str).str.len() > 0) | (combined[PHONE_COLUMN].astype(str).str.len() > 0)
     ]
 
     validation.missing_required_columns = {

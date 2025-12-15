@@ -5,6 +5,7 @@ import logging
 import pandas as pd
 import yaml
 
+from .constants import EMAIL_COLUMN, FIRST_NAME_COLUMN, LAST_NAME_COLUMN, PHONE_COLUMN, SOURCE_COLUMN, ZIP_COLUMN
 from .models import DedupResult
 
 logger = logging.getLogger(__name__)
@@ -17,15 +18,15 @@ def remove_duplicates(combo_df: pd.DataFrame, config: Mapping[str, Any]) -> Dedu
 
     priority_map = _load_priority(config)
     working = combo_df.copy()
-    working["_priority"] = working["Source"].map(priority_map).fillna(0)
-    working["_norm_email"] = working.get("Email", pd.Series(dtype=str)).fillna("").str.lower()
-    working["_norm_phone"] = working.get("Phone", pd.Series(dtype=str)).fillna("").apply(_digits_only)
+    working["_priority"] = working[SOURCE_COLUMN].map(priority_map).fillna(0)
+    working["_norm_email"] = working.get(EMAIL_COLUMN, pd.Series(dtype=str)).fillna("").str.lower()
+    working["_norm_phone"] = working.get(PHONE_COLUMN, pd.Series(dtype=str)).fillna("").apply(_digits_only)
     working["_norm_name_zip"] = (
-        working.get("Last Name", pd.Series(dtype=str)).fillna("").str.lower()
+        working.get(LAST_NAME_COLUMN, pd.Series(dtype=str)).fillna("").str.lower()
         + "|"
-        + working.get("First Name", pd.Series(dtype=str)).fillna("").str.lower()
+        + working.get(FIRST_NAME_COLUMN, pd.Series(dtype=str)).fillna("").str.lower()
         + "|"
-        + working.get("Zip", pd.Series(dtype=str)).fillna("")
+        + working.get(ZIP_COLUMN, pd.Series(dtype=str)).fillna("")
     )
 
     kept_rows = []

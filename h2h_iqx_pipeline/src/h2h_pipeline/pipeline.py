@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from . import dedup, export, file_discovery, ingestion, qa, transform
+from .constants import SOURCE_COLUMN
 from .logging_config import configure_logging
 
 
@@ -50,6 +51,6 @@ def run_pipeline(month: str, input_root: Path, config: Mapping[str, Any]) -> Non
 
 
 def _counts_by_source(df):
-    if "Source" not in df.columns:
+    if SOURCE_COLUMN not in df.columns:
         return {}
-    return df["Source"].value_counts().to_dict()
+    return df[SOURCE_COLUMN].value_counts().to_dict()

@@ -4,6 +4,17 @@ from typing import Any, Dict, Mapping
 import logging
 import pandas as pd
 
+from .constants import (
+    EMAIL_COLUMN,
+    FIRST_NAME_COLUMN,
+    LAST_NAME_COLUMN,
+    PHONE_COLUMN,
+    PROFESSION_COLUMN,
+    SERVICE_BRANCH_COLUMN,
+    SOURCE_CODE_COLUMN,
+    SOURCE_COLUMN,
+    ZIP_COLUMN,
+)
 from .models import DiscoveryResult
 
 
@@ -11,25 +22,25 @@ logger = logging.getLogger(__name__)
 
 # Maps normalized column tokens to canonical names
 CANONICAL_COLUMN_MAP = {
-    "last name": "Last Name",
-    "lastname": "Last Name",
-    "last_name": "Last Name",
-    "first name": "First Name",
-    "firstname": "First Name",
-    "first_name": "First Name",
-    "email": "Email",
-    "email address": "Email",
-    "email_address": "Email",
-    "phone": "Phone",
-    "phone number": "Phone",
-    "phone_number": "Phone",
-    "zip": "Zip",
-    "zipcode": "Zip",
-    "postal": "Zip",
-    "profession": "Profession",
-    "service branch": "Service Branch",
-    "service": "Service Branch",
-    "source": "Source",
+    "last name": LAST_NAME_COLUMN,
+    "lastname": LAST_NAME_COLUMN,
+    "last_name": LAST_NAME_COLUMN,
+    "first name": FIRST_NAME_COLUMN,
+    "firstname": FIRST_NAME_COLUMN,
+    "first_name": FIRST_NAME_COLUMN,
+    "email": EMAIL_COLUMN,
+    "email address": EMAIL_COLUMN,
+    "email_address": EMAIL_COLUMN,
+    "phone": PHONE_COLUMN,
+    "phone number": PHONE_COLUMN,
+    "phone_number": PHONE_COLUMN,
+    "zip": ZIP_COLUMN,
+    "zipcode": ZIP_COLUMN,
+    "postal": ZIP_COLUMN,
+    "profession": PROFESSION_COLUMN,
+    "service branch": SERVICE_BRANCH_COLUMN,
+    "service": SERVICE_BRANCH_COLUMN,
+    "source": SOURCE_COLUMN,
 }
 
 
@@ -72,9 +83,9 @@ def _read_and_normalize(path: Path, source_name: str, source_code: str | None) -
     df = _normalize_columns(df)
 
     # Add metadata columns
-    df["Source"] = source_name
+    df[SOURCE_COLUMN] = source_name
     if source_code:
-        df["External Source"] = source_code
+        df[SOURCE_CODE_COLUMN] = source_code
 
     # Drop rows with no identifiers
     df = df.dropna(how="all")
