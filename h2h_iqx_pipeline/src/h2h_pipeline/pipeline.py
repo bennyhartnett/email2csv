@@ -7,7 +7,7 @@ from .logging_config import configure_logging
 
 
 def run_pipeline(month: str, input_root: Path, config: Mapping[str, Any]) -> None:
-    """Top-level orchestration of the H2H → IQX pipeline."""
+    """Top-level orchestration of the H2H to IQX pipeline."""
 
     configure_logging(config)
 

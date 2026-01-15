@@ -25,3 +25,30 @@ def test_dedup_prefers_higher_priority(tmp_path):
     assert len(result.cleaned_df) == 1
     assert len(result.duplicates_df) == 1
     assert result.cleaned_df.iloc[0]["Source"] == "Ironworkers"
+
+
+def test_dedup_keeps_rows_without_identifiers():
+    data = pd.DataFrame({"Source": ["A", "B"]})
+
+    result = dedup.remove_duplicates(data, config={})
+
+    assert len(result.cleaned_df) == 2
+    assert result.stats["duplicates_removed"] == 0
+
+
+def test_dedup_ignores_blank_identifier_values():
+    data = pd.DataFrame(
+        {
+            "Source": ["A", "B"],
+            "Email": ["", ""],
+            "Phone": [pd.NA, pd.NA],
+            "Last Name": ["", ""],
+            "First Name": ["", ""],
+            "Zip": ["", ""],
+        }
+    )
+
+    result = dedup.remove_duplicates(data, config={})
+
+    assert len(result.cleaned_df) == 2
+    assert result.stats["duplicates_removed"] == 0

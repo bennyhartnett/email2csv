@@ -7,7 +7,7 @@ from .pipeline import run_pipeline
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="H2H → IQX bulk import pipeline (file-based prototype)"
+        description="H2H to IQX bulk import pipeline (file-based prototype)"
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)

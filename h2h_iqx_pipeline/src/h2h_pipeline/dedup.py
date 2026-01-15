@@ -1,4 +1,4 @@
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 from pathlib import Path
 
 import logging
@@ -19,15 +19,12 @@ def remove_duplicates(combo_df: pd.DataFrame, config: Mapping[str, Any]) -> Dedu
     priority_map = _load_priority(config)
     working = combo_df.copy()
     working["_priority"] = working[SOURCE_COLUMN].map(priority_map).fillna(0)
-    working["_norm_email"] = working.get(EMAIL_COLUMN, pd.Series(dtype=str)).fillna("").str.lower()
-    working["_norm_phone"] = working.get(PHONE_COLUMN, pd.Series(dtype=str)).fillna("").apply(_digits_only)
-    working["_norm_name_zip"] = (
-        working.get(LAST_NAME_COLUMN, pd.Series(dtype=str)).fillna("").str.lower()
-        + "|"
-        + working.get(FIRST_NAME_COLUMN, pd.Series(dtype=str)).fillna("").str.lower()
-        + "|"
-        + working.get(ZIP_COLUMN, pd.Series(dtype=str)).fillna("")
-    )
+    working["_norm_email"] = _normalize_column(working, EMAIL_COLUMN, lambda v: str(v).strip().lower())
+    working["_norm_phone"] = _normalize_column(working, PHONE_COLUMN, _digits_only)
+    last = _normalize_column(working, LAST_NAME_COLUMN, lambda v: str(v).strip().lower())
+    first = _normalize_column(working, FIRST_NAME_COLUMN, lambda v: str(v).strip().lower())
+    zip_code = _normalize_column(working, ZIP_COLUMN, lambda v: str(v).strip())
+    working["_norm_name_zip"] = _combine_keys([last, first, zip_code])
 
     kept_rows = []
     duplicate_rows = []
@@ -41,8 +38,12 @@ def remove_duplicates(combo_df: pd.DataFrame, config: Mapping[str, Any]) -> Dedu
         }
 
         duplicate = False
+        has_identifier = False
         for key_name, key_val in keys.items():
-            if key_val and key_val in seen[key_name]:
+            if not key_val:
+                continue
+            has_identifier = True
+            if key_val in seen[key_name]:
                 duplicate = True
                 break
 
@@ -50,9 +51,10 @@ def remove_duplicates(combo_df: pd.DataFrame, config: Mapping[str, Any]) -> Dedu
             duplicate_rows.append(row)
             continue
 
-        for key_name, key_val in keys.items():
-            if key_val:
-                seen[key_name].add(key_val)
+        if has_identifier:
+            for key_name, key_val in keys.items():
+                if key_val:
+                    seen[key_name].add(key_val)
         kept_rows.append(row)
 
     cleaned_df = pd.DataFrame(kept_rows).drop(
@@ -91,3 +93,22 @@ def _load_priority(config: Mapping[str, Any]) -> Mapping[str, int]:
 
 def _digits_only(value: Any) -> str:
     return "".join(ch for ch in str(value) if ch.isdigit())
+
+
+def _normalize_column(df: pd.DataFrame, column: str, normalizer: Callable[[Any], str]) -> pd.Series:
+    """Return a normalized string series aligned with df's index."""
+    if column in df:
+        series = df[column]
+    else:
+        series = pd.Series([""] * len(df), index=df.index, dtype=str)
+    series = series.fillna("")
+    return series.map(normalizer)
+
+
+def _combine_keys(series_list: list[pd.Series]) -> pd.Series:
+    """Join multiple key columns, returning empty when all components are blank."""
+    frame = pd.concat(series_list, axis=1)
+    combined = frame.astype(str).agg("|".join, axis=1)
+    has_any = (frame != "").any(axis=1)
+    combined[~has_any] = ""
+    return combined

@@ -1,4 +1,4 @@
-"""H2H → IQX pipeline package."""
+"""H2H to IQX pipeline package."""
 
 from .pipeline import run_pipeline
 
