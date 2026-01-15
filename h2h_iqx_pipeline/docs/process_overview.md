@@ -4,7 +4,7 @@ This prototype mirrors the current manual Excel workflow for importing H2H talen
 
 ## Inputs
 - Monthly folders under `paths.input_root`, e.g., `Vet Talents 2025-12/`.
-- Source Excel files per configured patterns (IBEW districts, Ironworkers, etc.).
+- Source Excel files per configured patterns (e.g., `Career Seekers Interested in IBEW D4 11052025-12042025.xlsx`).
 - Prior month Combo file (optional) to derive "new since last import" cutoff dates.
 - Mapping tables for service branches, professions, and source priority.
 
@@ -16,7 +16,7 @@ This prototype mirrors the current manual Excel workflow for importing H2H talen
    Read each source Excel into a DataFrame, standardize column names, tag rows with source metadata, and keep raw values for QA. Load the prior Combo (if present) for cutoff calculations.
 
 3. **Filter to new records**  
-   Remove rows older than the last import date per source (from config or inferred from prior Combo). Drop obvious blanks or rows without key identifiers (e.g., missing email and phone).
+   Remove rows older than the last import date per source (from config or inferred from prior Combo) using the `Create Date` field when available. Drop obvious blanks or rows without key identifiers (e.g., missing email and phone).
 
 4. **Transform**  
    - Apply mapping tables to service branches and professions.  
@@ -36,5 +36,5 @@ This prototype mirrors the current manual Excel workflow for importing H2H talen
 
 ## Outputs
 - Combined and cleaned Excel files ready for review.
-- CSV formatted for IQX bulk import with correct column order.
+- CSV formatted for IQX bulk import with correct column order and date formatting.
 - QA summary to validate completeness before uploading to IQX.

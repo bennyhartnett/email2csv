@@ -17,25 +17,35 @@ def test_run_pipeline_end_to_end(tmp_path, monkeypatch):
 
     pd.DataFrame(
         {
+            "Record ID": ["182240530351", "182190050458"],
             "Last Name": ["Doe", "Roe"],
             "First Name": ["Jane", "Sam"],
+            "Create Date": ["2025-12-04 09:00:00", "2025-12-04 10:00:00"],
+            "Mobile Phone Number": ["5551112222", "5553334444"],
             "Email": ["jane@example.com", "sam@example.com"],
-            "Phone": ["5551112222", "5553334444"],
-            "Zip": ["12345", "67890"],
-            "Profession": ["Ironworkers", "Electricians/Lineman"],
-            "Service Branch": ["Army", "Air"],
+            "Postal Code": ["12345", "67890"],
+            "Trade of Interest": ["Ironworkers", "Electricians/Lineman"],
+            "Branch of Service": ["Army", "Air Force"],
         }
-    ).to_excel(month_dir / "IBEW D4 sample.xlsx", index=False)
+    ).to_excel(
+        month_dir / "Career Seekers Interested in IBEW D4 11052025-12042025.xlsx",
+        index=False,
+    )
 
-    pd.DataFrame({"Email": ["old@example.com"], "Phone": ["5559998888"]}).to_excel(
+    pd.DataFrame({"Email": ["old@example.com"], "Mobile Phone Number": ["5559998888"]}).to_excel(
         prev_dir / "Combo H2H IBEW 4 8 9 Iron 2025-11.xlsx", index=False
     )
 
     config = {
         "paths": {"input_root": str(input_root), "output_root": str(tmp_path / "out"), "log_dir": str(tmp_path / "logs")},
-        "run": {"previous_month": "2025-11"},
+        "run": {"previous_month": "2025-11", "output_date": "2025-12-04"},
+        "date_handling": {"output_format": "%m/%d/%Y"},
         "sources": [
-            {"name": "IBEW D4", "code": "IBEW_4", "file_pattern": "IBEW D4 *.xlsx"},
+            {
+                "name": "IBEW D4",
+                "code": "IBEW_4",
+                "file_pattern": "Career Seekers Interested in IBEW D4 *.xlsx",
+            },
         ],
         "combo_files": {
             "excel_pattern": "Combo H2H IBEW 4 8 9 Iron {date}.xlsx",
@@ -43,32 +53,33 @@ def test_run_pipeline_end_to_end(tmp_path, monkeypatch):
         },
         "iqx_import": {
             "column_order": [
-                "External ID",
-                "External Source",
-                "Invited",
-                "Source",
-                "Internal Comments",
-                "Last Name",
-                "First Name",
-                "Phone",
-                "Email",
-                "Zip",
-                "Profession",
-                "Date Available",
-                "End Date",
-                "Location Radius",
-                "Trade",
-                "Union Code",
-                "Pay Scale",
+                "Summary - Bulk Import Failure Notes",
+                "external_identifier",
+                "external_source",
+                "internal_comment",
+                "date_available",
+                "end_date",
+                "location_radius",
+                "last_name",
+                "first_name",
+                "phone_number",
+                "email",
+                "location_zip",
+                "profession",
+                "industry",
+                "talent_price_category",
+                "clearance_level",
+                "clearance_agency",
+                "clearance_status",
+                "clearance_investigation",
             ]
         },
         "defaults": {
-            "invited_flag": "I",
-            "location_radius_miles": 100,
-            "trade": "Electricians",
-            "union_code": "22 Utilities",
-            "pay_scale": "A",
-            "date_available_offset_days": 1,
+            "location_radius": 100,
+            "industry": "23 Construction",
+            "talent_price_category": "A",
+            "external_identifier_strategy": "blank",
+            "date_available_offset_days": 6,
             "end_date_years_from_available": 1,
         },
         "mappings": {
@@ -83,7 +94,7 @@ def test_run_pipeline_end_to_end(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     Path(config["mappings"]["service_branches"]).write_text(
-        '"Army": "Service: Army"\n"Air": "Service: Air"\n', encoding="utf-8"
+        '"Army": "Service: Army"\n"Air Force": "Service: Air Force"\n', encoding="utf-8"
     )
     Path(config["mappings"]["source_priority"]).write_text('"IBEW D4": 90\n', encoding="utf-8")
 
@@ -98,8 +109,8 @@ def test_run_pipeline_end_to_end(tmp_path, monkeypatch):
     run_pipeline(month="2025-12", input_root=input_root, config=loaded)
 
     out_dir = Path(config["paths"]["output_root"])
-    combo_csv = out_dir / "Bulk Import H2H Combo IBEW 4 8 9 Iron 2025-12.csv"
-    qa_report = out_dir / "QA Report 2025-12.txt"
+    combo_csv = out_dir / "Bulk Import H2H Combo IBEW 4 8 9 Iron 2025-12-04.csv"
+    qa_report = out_dir / "QA Report 2025-12-04.txt"
 
     assert combo_csv.exists(), "IQX CSV should be produced"
     assert qa_report.exists(), "QA report should be produced"
@@ -107,7 +118,7 @@ def test_run_pipeline_end_to_end(tmp_path, monkeypatch):
     df_out = pd.read_csv(combo_csv)
     # One of the two rows should remain after dedup (none duplicates here)
     assert len(df_out) == 2
-    assert sorted(df_out["Profession"].unique()) == [
+    assert sorted(df_out["profession"].unique()) == [
         "Electricians",
         "Structural Iron and Steel Workers",
     ]

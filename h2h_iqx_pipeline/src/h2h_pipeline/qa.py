@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def generate_report(
-    month: str,
+    run_label: str,
     combo_df: pd.DataFrame,
     dedup_result: DedupResult,
     export_paths: Mapping[str, Path],
@@ -26,10 +26,10 @@ def generate_report(
     output_root = Path(paths_cfg.get("output_root", "output"))
     output_root.mkdir(parents=True, exist_ok=True)
 
-    report_path = output_root / f"QA Report {month}.txt"
+    report_path = output_root / f"QA Report {run_label}.txt"
 
     lines = [
-        f"QA report for {month}",
+        f"QA report for {run_label}",
         "",
         f"Rows in Combo: {len(combo_df)}",
         f"Rows after dedup: {len(dedup_result.cleaned_df)}",

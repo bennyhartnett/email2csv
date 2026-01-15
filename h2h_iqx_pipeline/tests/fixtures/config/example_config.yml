@@ -10,6 +10,7 @@ paths:
 run:
   current_month: "2025-12"
   previous_month: "2025-11"
+  output_date: "2025-12-04"
 
 combo_files:
   excel_pattern: "Combo H2H IBEW 4 8 9 Iron {date}.xlsx"
@@ -23,20 +24,27 @@ date_handling:
     "IBEW D9": "2025-11-20"
     "Ironworkers": "2025-11-20"
   timezone: "US/Eastern"
+  output_format: "%m/%d/%Y"
+  include_cutoff_date: false
+  exclude_previously_imported: true
 
 sources:
   - name: "IBEW D4"
     code: "IBEW_4"
-    file_pattern: "IBEW D4 *.xlsx"
+    output_label: "IBEW 4"
+    file_pattern: "Career Seekers Interested in IBEW D4 *.xlsx"
   - name: "IBEW D8"
     code: "IBEW_8"
-    file_pattern: "IBEW D8 *.xlsx"
+    output_label: "IBEW 8"
+    file_pattern: "Career Seekers Interested in IBEW D8 *.xlsx"
   - name: "IBEW D9"
     code: "IBEW_9"
-    file_pattern: "IBEW D9 *.xlsx"
+    output_label: "IBEW 9"
+    file_pattern: "Career Seekers Interested in IBEW D9 *.xlsx"
   - name: "Ironworkers"
     code: "IRON"
-    file_pattern: "Ironworkers *.xlsx"
+    output_label: "Ironworkers"
+    file_pattern: "Career Seekers Interested in Ironworkers *.xlsx"
 
 mappings:
   professions: "config/mappings/professions.yml"
@@ -45,29 +53,30 @@ mappings:
 
 iqx_import:
   column_order:
-    - "External ID"
-    - "External Source"
-    - "Invited"
-    - "Source"
-    - "Internal Comments"
-    - "Last Name"
-    - "First Name"
-    - "Phone"
-    - "Email"
-    - "Zip"
-    - "Profession"
-    - "Date Available"
-    - "End Date"
-    - "Location Radius"
-    - "Trade"
-    - "Union Code"
-    - "Pay Scale"
+    - "Summary - Bulk Import Failure Notes"
+    - "external_identifier"
+    - "external_source"
+    - "internal_comment"
+    - "date_available"
+    - "end_date"
+    - "location_radius"
+    - "last_name"
+    - "first_name"
+    - "phone_number"
+    - "email"
+    - "location_zip"
+    - "profession"
+    - "industry"
+    - "talent_price_category"
+    - "clearance_level"
+    - "clearance_agency"
+    - "clearance_status"
+    - "clearance_investigation"
 
 defaults:
-  invited_flag: "I"
-  location_radius_miles: 100
-  trade: "Electricians"
-  union_code: "22 Utilities"
-  pay_scale: "A"
-  date_available_offset_days: 1
+  location_radius: 100
+  industry: "23 Construction"
+  talent_price_category: "A"
+  external_identifier_strategy: "blank"
+  date_available_offset_days: 6
   end_date_years_from_available: 1

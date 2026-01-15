@@ -1,0 +1,12 @@
+2026-01-14 21:17:26,561 [INFO] h2h_pipeline.logging_config: Logging initialized. Writing to C:\Users\johnb\Code\email2csv\h2h_iqx_pipeline\excel_example_run_0208q7yb\logs\pipeline.log
+2026-01-14 21:17:26,567 [INFO] h2h_pipeline.file_discovery: Discovery completed for 2025-12: 4 sources, previous combo: none
+2026-01-14 21:17:27,022 [INFO] h2h_pipeline.ingestion: Filtered 46 rows from IBEW D4 before 2025-11-20
+2026-01-14 21:17:27,024 [INFO] h2h_pipeline.ingestion: Filtered 13 rows from IBEW D8 before 2025-11-20
+2026-01-14 21:17:27,025 [INFO] h2h_pipeline.ingestion: Filtered 110 rows from IBEW D9 before 2025-11-20
+2026-01-14 21:17:27,027 [INFO] h2h_pipeline.ingestion: Filtered 82 rows from Ironworkers before 2025-11-20
+2026-01-14 21:17:27,060 [INFO] h2h_pipeline.transform: Built Combo frame with 204 rows and 26 columns
+2026-01-14 21:17:27,093 [INFO] h2h_pipeline.dedup: Dedup completed. In: 204, out: 191, duplicates: 13
+2026-01-14 21:17:27,197 [INFO] h2h_pipeline.export: Wrote Combo to C:\Users\johnb\Code\email2csv\h2h_iqx_pipeline\excel_example_run_0208q7yb\Combo H2H IBEW 4 8 9 Iron 2025-12-04.xlsx
+2026-01-14 21:17:27,334 [INFO] h2h_pipeline.export: Wrote Combo Dups Removed to C:\Users\johnb\Code\email2csv\h2h_iqx_pipeline\excel_example_run_0208q7yb\Combo Dups Removed 2025-12-04.xlsx
+2026-01-14 21:17:27,339 [INFO] h2h_pipeline.export: Wrote IQX CSV to C:\Users\johnb\Code\email2csv\h2h_iqx_pipeline\excel_example_run_0208q7yb\Bulk Import H2H Combo IBEW 4 8 9 Iron 2025-12-04.csv
+2026-01-14 21:17:27,342 [INFO] h2h_pipeline.qa: QA report written to C:\Users\johnb\Code\email2csv\h2h_iqx_pipeline\excel_example_run_0208q7yb\QA Report 2025-12-04.txt

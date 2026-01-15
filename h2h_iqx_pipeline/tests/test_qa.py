@@ -7,7 +7,7 @@ from h2h_pipeline.models import DedupResult, ValidationReport, DiscoveryResult
 
 
 def test_qa_report_includes_validation(tmp_path):
-    combo = pd.DataFrame({"Email": ["a@example.com"], "Source": ["IBEW D4"]})
+    combo = pd.DataFrame({"email": ["a@example.com"], "external_source": ["IBEW D4"]})
     dedup_result = DedupResult(
         cleaned_df=combo,
         duplicates_df=combo.iloc[0:0],
@@ -19,7 +19,7 @@ def test_qa_report_includes_validation(tmp_path):
         missing_service_branch_mappings=set(),
         invalid_phones=["0:12345"],
         invalid_zips=["0:12"],
-        missing_required_columns={"Phone"},
+        missing_required_columns={"phone_number"},
     )
     discovery = DiscoveryResult(
         month="2025-12",
@@ -31,7 +31,7 @@ def test_qa_report_includes_validation(tmp_path):
     config = {"paths": {"output_root": str(tmp_path)}}
 
     report = qa.generate_report(
-        month="2025-12",
+        run_label="2025-12-04",
         combo_df=combo,
         dedup_result=dedup_result,
         export_paths=export_paths,
@@ -45,6 +45,6 @@ def test_qa_report_includes_validation(tmp_path):
     content = Path(report).read_text(encoding="utf-8")
     assert "Missing profession mappings: ['Unknown']" in content
     assert "Invalid phone values (row:value): ['0:12345']" in content
-    assert "Missing required columns: ['Phone']" in content
+    assert "Missing required columns: ['phone_number']" in content
     assert "IBEW D4: 1" in content
     assert "Missing source files for: IBEW D8" in content

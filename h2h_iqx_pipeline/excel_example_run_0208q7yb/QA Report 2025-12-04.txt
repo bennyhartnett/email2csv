@@ -1,0 +1,35 @@
+QA report for 2025-12-04
+
+Rows in Combo: 204
+Rows after dedup: 191
+Duplicates removed: 13
+
+Outputs:
+- combo_excel: C:\Users\johnb\Code\email2csv\h2h_iqx_pipeline\excel_example_run_0208q7yb\Combo H2H IBEW 4 8 9 Iron 2025-12-04.xlsx
+- dedup_excel: C:\Users\johnb\Code\email2csv\h2h_iqx_pipeline\excel_example_run_0208q7yb\Combo Dups Removed 2025-12-04.xlsx
+- iqx_csv: C:\Users\johnb\Code\email2csv\h2h_iqx_pipeline\excel_example_run_0208q7yb\Bulk Import H2H Combo IBEW 4 8 9 Iron 2025-12-04.csv
+
+Per-source counts before dedup:
+- IBEW 4: 33
+- IBEW 8: 16
+- IBEW 9: 84
+- Ironworkers: 71
+
+Per-source counts after dedup:
+- IBEW 4: 31
+- IBEW 8: 14
+- IBEW 8 & IBEW 9: 2
+- IBEW 9: 74
+- Ironworkers: 60
+- Ironworkers & IBEW 4: 2
+- Ironworkers & IBEW 9: 8
+
+Validation findings:
+- Missing profession mappings: none
+- Missing service branch mappings: none
+- Invalid phone values (row:value): ['82: +81 080 9854 1427']
+- Invalid zip values (row:value): none
+- Missing required columns: none
+
+Discovery warnings:
+- none

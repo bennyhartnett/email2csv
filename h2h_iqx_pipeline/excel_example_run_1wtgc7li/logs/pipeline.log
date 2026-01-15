@@ -1,0 +1,7 @@
+2026-01-14 21:16:36,351 [INFO] h2h_pipeline.logging_config: Logging initialized. Writing to C:\Users\johnb\Code\email2csv\h2h_iqx_pipeline\excel_example_run_1wtgc7li\logs\pipeline.log
+2026-01-14 21:16:36,354 [INFO] h2h_pipeline.file_discovery: Discovery completed for 2025-12: 4 sources, previous combo: none
+2026-01-14 21:16:36,739 [INFO] h2h_pipeline.ingestion: Filtered 46 rows from IBEW D4 before 2025-11-20
+2026-01-14 21:16:36,741 [INFO] h2h_pipeline.ingestion: Filtered 13 rows from IBEW D8 before 2025-11-20
+2026-01-14 21:16:36,762 [INFO] h2h_pipeline.ingestion: Filtered 110 rows from IBEW D9 before 2025-11-20
+2026-01-14 21:16:36,764 [INFO] h2h_pipeline.ingestion: Filtered 82 rows from Ironworkers before 2025-11-20
+2026-01-14 21:16:36,777 [INFO] h2h_pipeline.transform: Built Combo frame with 204 rows and 26 columns

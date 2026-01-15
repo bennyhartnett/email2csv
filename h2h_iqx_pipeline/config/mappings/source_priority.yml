@@ -1,6 +1,6 @@
 # Higher number = higher priority when choosing which duplicate to keep
 "Ironworkers": 100
-"IBEW D8": 90
-"IBEW D4": 80
-"IBEW D9": 70
+"IBEW 8": 90
+"IBEW 4": 80
+"IBEW 9": 70
 "Other": 10

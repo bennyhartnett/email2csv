@@ -17,6 +17,12 @@ def discover_month_files(
     sources: Dict[str, Path] = {}
     missing_sources: list[str] = []
 
+    if not month_dir:
+        for candidate in (input_root / "inputs", input_root):
+            if candidate.exists() and _contains_source_files(candidate, config):
+                month_dir = candidate
+                break
+
     if month_dir:
         for source_cfg in config.get("sources", []):
             pattern = source_cfg.get("file_pattern")
@@ -88,3 +94,13 @@ def _find_previous_combo(input_root: Path, config: Mapping[str, Any]) -> Path | 
         if matches:
             return matches[0]
     return None
+
+
+def _contains_source_files(root: Path, config: Mapping[str, Any]) -> bool:
+    for source_cfg in config.get("sources", []):
+        pattern = source_cfg.get("file_pattern")
+        if not pattern:
+            continue
+        if list(root.glob(pattern)):
+            return True
+    return False

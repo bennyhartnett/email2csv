@@ -15,7 +15,7 @@ def test_validate_config_checks_input_root(tmp_path):
     cfg = {
         "paths": {"input_root": str(tmp_path / "missing"), "output_root": str(tmp_path / "out"), "log_dir": "logs"},
         "sources": [{"name": "A", "code": "A", "file_pattern": "*.xlsx"}],
-        "iqx_import": {"column_order": ["Email"]},
+        "iqx_import": {"column_order": ["email"]},
         "mappings": {},
     }
     cfg_path = tmp_path / "cfg.yml"

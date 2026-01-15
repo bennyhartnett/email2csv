@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Any, Mapping
 
+import pandas as pd
+
 from . import dedup, export, file_discovery, ingestion, qa, transform
-from .constants import SOURCE_COLUMN
+from .constants import CREATE_DATE_COLUMN, SOURCE_COLUMN
 from .logging_config import configure_logging
 
 
@@ -21,6 +23,8 @@ def run_pipeline(month: str, input_root: Path, config: Mapping[str, Any]) -> Non
     # 2. Ingest source Excel and existing Combo
     raw_data = ingestion.load_sources(discovery, config=config)
 
+    run_label = _resolve_run_label(month, raw_data, config)
+
     # 3. Transform and standardize into "Combo All Lists" equivalent
     transform_result = transform.build_combo(month=month, raw_data=raw_data, config=config)
     combo_df = transform_result.combo_df
@@ -30,7 +34,7 @@ def run_pipeline(month: str, input_root: Path, config: Mapping[str, Any]) -> Non
 
     # 5. Export Excel + CSV for IQX
     export_paths = export.write_outputs(
-        month=month,
+        run_label=run_label,
         combo_df=combo_df,
         dedup_df=dedup_result.cleaned_df,
         config=config,
@@ -38,7 +42,7 @@ def run_pipeline(month: str, input_root: Path, config: Mapping[str, Any]) -> Non
 
     # 6. Generate QA summary report
     qa.generate_report(
-        month=month,
+        run_label=run_label,
         combo_df=combo_df,
         dedup_result=dedup_result,
         export_paths=export_paths,
@@ -54,3 +58,32 @@ def _counts_by_source(df):
     if SOURCE_COLUMN not in df.columns:
         return {}
     return df[SOURCE_COLUMN].value_counts().to_dict()
+
+
+def _resolve_run_label(month: str, raw_data: Mapping[str, pd.DataFrame], config: Mapping[str, Any]) -> str:
+    run_cfg = config.get("run", {}) if isinstance(config, Mapping) else {}
+    for key in ("output_date", "current_date", "run_date"):
+        value = run_cfg.get(key)
+        if value:
+            return str(value)
+
+    latest = _latest_create_date(raw_data)
+    if latest is not None:
+        return latest.strftime("%Y-%m-%d")
+
+    return month
+
+
+def _latest_create_date(raw_data: Mapping[str, pd.DataFrame]) -> pd.Timestamp | None:
+    latest = None
+    for name, df in raw_data.items():
+        if name.startswith("_previous"):
+            continue
+        if CREATE_DATE_COLUMN not in df.columns:
+            continue
+        series = pd.to_datetime(df[CREATE_DATE_COLUMN], errors="coerce")
+        if series.notna().any():
+            candidate = series.max()
+            if latest is None or candidate > latest:
+                latest = candidate
+    return latest

@@ -6,12 +6,12 @@ from h2h_pipeline import dedup
 def test_dedup_prefers_higher_priority(tmp_path):
     data = pd.DataFrame(
         {
-            "Source": ["Ironworkers", "IBEW D8"],
-            "Last Name": ["Doe", "Doe"],
-            "First Name": ["John", "John"],
-            "Email": ["john@example.com", "john@example.com"],
-            "Phone": ["555-123-4567", "555-123-4567"],
-            "Zip": ["12345", "12345"],
+            "external_source": ["Ironworkers", "IBEW D8"],
+            "last_name": ["Doe", "Doe"],
+            "first_name": ["John", "John"],
+            "email": ["john@example.com", "john@example.com"],
+            "phone_number": ["555-123-4567", "555-123-4567"],
+            "location_zip": ["12345", "12345"],
         }
     )
 
@@ -24,11 +24,11 @@ def test_dedup_prefers_higher_priority(tmp_path):
 
     assert len(result.cleaned_df) == 1
     assert len(result.duplicates_df) == 1
-    assert result.cleaned_df.iloc[0]["Source"] == "Ironworkers"
+    assert result.cleaned_df.iloc[0]["external_source"] == "Ironworkers & IBEW D8"
 
 
 def test_dedup_keeps_rows_without_identifiers():
-    data = pd.DataFrame({"Source": ["A", "B"]})
+    data = pd.DataFrame({"external_source": ["A", "B"]})
 
     result = dedup.remove_duplicates(data, config={})
 
@@ -39,12 +39,12 @@ def test_dedup_keeps_rows_without_identifiers():
 def test_dedup_ignores_blank_identifier_values():
     data = pd.DataFrame(
         {
-            "Source": ["A", "B"],
-            "Email": ["", ""],
-            "Phone": [pd.NA, pd.NA],
-            "Last Name": ["", ""],
-            "First Name": ["", ""],
-            "Zip": ["", ""],
+            "external_source": ["A", "B"],
+            "email": ["", ""],
+            "phone_number": [pd.NA, pd.NA],
+            "last_name": ["", ""],
+            "first_name": ["", ""],
+            "location_zip": ["", ""],
         }
     )
 

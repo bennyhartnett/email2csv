@@ -26,54 +26,82 @@ def remove_duplicates(combo_df: pd.DataFrame, config: Mapping[str, Any]) -> Dedu
     zip_code = _normalize_column(working, ZIP_COLUMN, lambda v: str(v).strip())
     working["_norm_name_zip"] = _combine_keys([last, first, zip_code])
 
-    kept_rows = []
-    duplicate_rows = []
-    seen = {"_norm_email": set(), "_norm_phone": set(), "_norm_name_zip": set()}
+    working = working.sort_values(by="_priority", ascending=False).reset_index(drop=True)
 
-    for _, row in working.sort_values(by="_priority", ascending=False).iterrows():
-        keys = {
-            "_norm_email": row["_norm_email"],
-            "_norm_phone": row["_norm_phone"],
-            "_norm_name_zip": row["_norm_name_zip"],
-        }
+    parent = list(range(len(working)))
 
-        duplicate = False
-        has_identifier = False
-        for key_name, key_val in keys.items():
+    def find(idx: int) -> int:
+        while parent[idx] != idx:
+            parent[idx] = parent[parent[idx]]
+            idx = parent[idx]
+        return idx
+
+    def union(a: int, b: int) -> None:
+        root_a = find(a)
+        root_b = find(b)
+        if root_a != root_b:
+            parent[root_b] = root_a
+
+    key_to_index: dict[str, dict[str, int]] = {"_norm_email": {}, "_norm_phone": {}, "_norm_name_zip": {}}
+    for idx, row in working.iterrows():
+        for key_name in key_to_index:
+            key_val = row[key_name]
             if not key_val:
                 continue
-            has_identifier = True
-            if key_val in seen[key_name]:
-                duplicate = True
-                break
+            existing = key_to_index[key_name].get(key_val)
+            if existing is None:
+                key_to_index[key_name][key_val] = idx
+            else:
+                union(idx, existing)
 
-        if duplicate:
-            duplicate_rows.append(row)
-            continue
+    groups: dict[int, list[int]] = {}
+    for idx in range(len(working)):
+        root = find(idx)
+        groups.setdefault(root, []).append(idx)
 
-        if has_identifier:
-            for key_name, key_val in keys.items():
-                if key_val:
-                    seen[key_name].add(key_val)
-        kept_rows.append(row)
+    kept_indices: list[int] = []
+    duplicate_indices: list[int] = []
+    combined_sources: dict[int, set[str]] = {}
 
-    cleaned_df = pd.DataFrame(kept_rows).drop(
-        columns=["_priority", "_norm_email", "_norm_phone", "_norm_name_zip"], errors="ignore"
+    for indices in groups.values():
+        kept = min(indices)
+        kept_indices.append(kept)
+        combined_sources[kept] = set(working.loc[indices, SOURCE_COLUMN].astype(str))
+        for idx in indices:
+            if idx != kept:
+                duplicate_indices.append(idx)
+
+    kept_indices.sort()
+    duplicate_indices.sort()
+
+    cleaned_df = (
+        working.loc[kept_indices]
+        .drop(columns=["_priority", "_norm_email", "_norm_phone", "_norm_name_zip"], errors="ignore")
+        .reset_index(drop=True)
     )
-    duplicates_df = pd.DataFrame(duplicate_rows).drop(
-        columns=["_priority", "_norm_email", "_norm_phone", "_norm_name_zip"], errors="ignore"
+    duplicates_df = (
+        working.loc[duplicate_indices]
+        .drop(columns=["_priority", "_norm_email", "_norm_phone", "_norm_name_zip"], errors="ignore")
+        .reset_index(drop=True)
     )
+
+    if not cleaned_df.empty and SOURCE_COLUMN in cleaned_df.columns:
+        ordered_sources = []
+        for kept in kept_indices:
+            sources = combined_sources.get(kept, {str(working.at[kept, SOURCE_COLUMN])})
+            ordered_sources.append(_format_sources(sources, priority_map))
+        cleaned_df[SOURCE_COLUMN] = ordered_sources
 
     stats = {
         "input_rows": len(combo_df),
-        "duplicates_removed": len(duplicate_rows),
+        "duplicates_removed": len(duplicate_indices),
         "output_rows": len(cleaned_df),
     }
     logger.info(
         "Dedup completed. In: %s, out: %s, duplicates: %s",
         len(combo_df),
         len(cleaned_df),
-        len(duplicate_rows),
+        len(duplicate_indices),
     )
     return DedupResult(cleaned_df=cleaned_df, duplicates_df=duplicates_df, stats=stats)
 
@@ -112,3 +140,8 @@ def _combine_keys(series_list: list[pd.Series]) -> pd.Series:
     has_any = (frame != "").any(axis=1)
     combined[~has_any] = ""
     return combined
+
+
+def _format_sources(sources: set[str], priority_map: Mapping[str, int]) -> str:
+    ordered = sorted(sources, key=lambda s: (-priority_map.get(s, 0), s))
+    return " & ".join(ordered)
