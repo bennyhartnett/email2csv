@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
@@ -47,12 +48,16 @@ class PipelineApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("H2H IQX Pipeline")
-        self.minsize(720, 520)
+        self.geometry("1100x700")
+        self.minsize(1000, 640)
 
         self._queue: queue.Queue[tuple[str, Any]] = queue.Queue()
         self._running = False
         self._last_output_root: Path | None = None
         self._last_log_file: Path | None = None
+
+        self._colors: dict[str, str] = {}
+        self._apply_theme()
 
         settings = self._load_settings()
         self.config_path_var = tk.StringVar(value=settings.get("config_path", ""))
@@ -60,6 +65,8 @@ class PipelineApp(tk.Tk):
         self.output_root_var = tk.StringVar(value=settings.get("output_root", ""))
         self.month_var = tk.StringVar(value=settings.get("month", date.today().strftime("%Y-%m")))
         self.status_var = tk.StringVar(value="Idle")
+        self.status_label: ttk.Label | None = None
+        self.progress: ttk.Progressbar | None = None
 
         self._build_ui()
         self._prefill_from_config()
@@ -67,17 +74,171 @@ class PipelineApp(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(100, self._drain_queue)
 
+    def _pick_font(self, candidates: list[str]) -> str:
+        available = set(tkfont.families(self))
+        for name in candidates:
+            if name in available:
+                return name
+        return candidates[-1]
+
+    def _apply_theme(self) -> None:
+        colors = {
+            "bg": "#0b0f14",
+            "header": "#0f172a",
+            "card": "#111827",
+            "text": "#e5e7eb",
+            "muted": "#9ca3af",
+            "accent": "#22d3ee",
+            "accent_dark": "#0891b2",
+            "accent_light": "#67e8f9",
+            "input": "#0b1220",
+            "border": "#1f2937",
+            "log_bg": "#070a0f",
+            "log_fg": "#cbd5e1",
+            "pill_idle": "#1f2937",
+            "pill_run": "#0b3a4d",
+            "pill_done": "#0b3b2b",
+            "pill_error": "#4c1d1d",
+        }
+        self._colors = colors
+
+        self.configure(bg=colors["bg"])
+        style = ttk.Style(self)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+
+        base_font = self._pick_font(["Segoe UI Variable Text", "Segoe UI", "Helvetica"])
+        title_font = self._pick_font(["Segoe UI Variable Display", "Segoe UI", "Helvetica"])
+        mono_font = self._pick_font(["Cascadia Mono", "Consolas", "Courier New"])
+
+        self.body_font = tkfont.Font(family=base_font, size=10)
+        self.title_font = tkfont.Font(family=title_font, size=20, weight="bold")
+        self.section_font = tkfont.Font(family=base_font, size=12, weight="bold")
+        self.button_font = tkfont.Font(family=base_font, size=10, weight="bold")
+        self.pill_font = tkfont.Font(family=base_font, size=9, weight="bold")
+        self.mono_font = tkfont.Font(family=mono_font, size=9)
+
+        style.configure("TLabel", background=colors["bg"], foreground=colors["text"], font=self.body_font)
+        style.configure("App.TFrame", background=colors["bg"])
+        style.configure("Header.TFrame", background=colors["header"])
+        style.configure("Card.TFrame", background=colors["card"])
+        style.configure("Card.TLabel", background=colors["card"], foreground=colors["text"], font=self.body_font)
+        style.configure("Card.Title.TLabel", background=colors["card"], foreground=colors["text"], font=self.section_font)
+        style.configure("Card.Subtitle.TLabel", background=colors["card"], foreground=colors["muted"], font=self.body_font)
+        style.configure("Header.Title.TLabel", background=colors["header"], foreground=colors["text"], font=self.title_font)
+        style.configure(
+            "Header.Subtitle.TLabel", background=colors["header"], foreground=colors["muted"], font=self.body_font
+        )
+
+        style.configure("Modern.TEntry", fieldbackground=colors["input"], foreground=colors["text"])
+
+        style.configure(
+            "Accent.TButton",
+            background=colors["accent"],
+            foreground="#0b0f14",
+            borderwidth=0,
+            padding=(14, 6),
+            font=self.button_font,
+        )
+        style.map(
+            "Accent.TButton",
+            background=[("pressed", colors["accent_dark"]), ("active", colors["accent_light"])],
+            foreground=[("disabled", colors["muted"])],
+        )
+
+        style.configure(
+            "Secondary.TButton",
+            background=colors["card"],
+            foreground=colors["text"],
+            borderwidth=1,
+            padding=(12, 6),
+            font=self.button_font,
+        )
+        style.map(
+            "Secondary.TButton",
+            background=[("active", colors["input"])],
+            foreground=[("disabled", colors["muted"])],
+        )
+
+        style.configure(
+            "Pill.Idle.TLabel",
+            background=colors["pill_idle"],
+            foreground=colors["text"],
+            padding=(10, 4),
+            font=self.pill_font,
+        )
+        style.configure(
+            "Pill.Running.TLabel",
+            background=colors["pill_run"],
+            foreground=colors["text"],
+            padding=(10, 4),
+            font=self.pill_font,
+        )
+        style.configure(
+            "Pill.Done.TLabel",
+            background=colors["pill_done"],
+            foreground=colors["text"],
+            padding=(10, 4),
+            font=self.pill_font,
+        )
+        style.configure(
+            "Pill.Error.TLabel",
+            background=colors["pill_error"],
+            foreground=colors["text"],
+            padding=(10, 4),
+            font=self.pill_font,
+        )
+
+        style.configure("TSeparator", background=colors["border"])
+
+        style.configure(
+            "Accent.Horizontal.TProgressbar",
+            troughcolor=colors["input"],
+            background=colors["accent"],
+            bordercolor=colors["border"],
+            lightcolor=colors["accent"],
+            darkcolor=colors["accent_dark"],
+        )
+
     def _build_ui(self) -> None:
-        main = ttk.Frame(self, padding=12)
+        main = ttk.Frame(self, padding=20, style="App.TFrame")
         main.grid(row=0, column=0, sticky="nsew")
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
-        main.columnconfigure(1, weight=1)
+        main.columnconfigure(0, weight=6)
+        main.columnconfigure(1, weight=5)
+        main.rowconfigure(1, weight=1)
 
-        row = 0
+        header = ttk.Frame(main, padding=(18, 16), style="Header.TFrame")
+        header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
+        header.columnconfigure(0, weight=1)
+
+        ttk.Label(header, text="H2H IQX Pipeline", style="Header.Title.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(
+            header,
+            text="Build, clean, and export IQX-ready CSVs in one run.",
+            style="Header.Subtitle.TLabel",
+        ).grid(row=1, column=0, sticky="w", pady=(6, 0))
+
+        left = ttk.Frame(main, padding=16, style="Card.TFrame")
+        left.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
+        left.columnconfigure(0, minsize=140)
+        left.columnconfigure(1, weight=1, minsize=320)
+        left.columnconfigure(2, minsize=110)
+
+        ttk.Label(left, text="Run configuration", style="Card.Title.TLabel").grid(
+            row=0, column=0, columnspan=3, sticky="w"
+        )
+        ttk.Label(
+            left, text="Select your config and data folders, then pick a month.", style="Card.Subtitle.TLabel"
+        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(2, 10))
+
+        row = 2
         self._add_browse_row(
-            main,
+            left,
             row,
             "Config file",
             self.config_path_var,
@@ -86,7 +247,7 @@ class PipelineApp(tk.Tk):
         )
         row += 1
         self._add_browse_row(
-            main,
+            left,
             row,
             "Input root folder",
             self.input_root_var,
@@ -95,7 +256,7 @@ class PipelineApp(tk.Tk):
         )
         row += 1
         self._add_browse_row(
-            main,
+            left,
             row,
             "Output folder",
             self.output_root_var,
@@ -104,36 +265,71 @@ class PipelineApp(tk.Tk):
         )
         row += 1
 
-        ttk.Label(main, text="Month (YYYY-MM)").grid(row=row, column=0, sticky="w", pady=(6, 6))
-        ttk.Entry(main, textvariable=self.month_var).grid(row=row, column=1, sticky="ew", pady=(6, 6))
+        ttk.Label(left, text="Month (YYYY-MM)", style="Card.TLabel").grid(row=row, column=0, sticky="w", pady=(8, 6))
+        ttk.Entry(left, textvariable=self.month_var, style="Modern.TEntry").grid(
+            row=row, column=1, columnspan=2, sticky="ew", pady=(8, 6)
+        )
         row += 1
 
-        buttons = ttk.Frame(main)
-        buttons.grid(row=row, column=0, columnspan=3, sticky="w", pady=(6, 12))
+        ttk.Separator(left).grid(row=row, column=0, columnspan=3, sticky="ew", pady=(8, 12))
+        row += 1
 
-        self.run_button = ttk.Button(buttons, text="Run pipeline", command=self._start_run)
-        self.run_button.grid(row=0, column=0, padx=(0, 8))
+        buttons = ttk.Frame(left, style="Card.TFrame")
+        buttons.grid(row=row, column=0, columnspan=3, sticky="ew")
+        buttons.columnconfigure(0, weight=1, uniform="actions")
+        buttons.columnconfigure(1, weight=1, uniform="actions")
+        buttons.columnconfigure(2, weight=1, uniform="actions")
+
+        self.run_button = ttk.Button(buttons, text="Run pipeline", command=self._start_run, style="Accent.TButton")
+        self.run_button.grid(row=0, column=0, padx=(0, 8), sticky="ew")
 
         self.open_output_button = ttk.Button(
-            buttons, text="Open output folder", command=self._open_output, state="disabled"
+            buttons, text="Open output folder", command=self._open_output, state="disabled", style="Secondary.TButton"
         )
-        self.open_output_button.grid(row=0, column=1, padx=(0, 8))
+        self.open_output_button.grid(row=0, column=1, padx=(0, 8), sticky="ew")
 
         self.open_log_button = ttk.Button(
-            buttons, text="Open log file", command=self._open_log, state="disabled"
+            buttons, text="Open log file", command=self._open_log, state="disabled", style="Secondary.TButton"
         )
-        self.open_log_button.grid(row=0, column=2, padx=(0, 8))
+        self.open_log_button.grid(row=0, column=2, sticky="ew")
 
         row += 1
-        ttk.Label(main, text="Status").grid(row=row, column=0, sticky="w")
-        ttk.Label(main, textvariable=self.status_var).grid(row=row, column=1, sticky="w")
-        row += 1
+        self.progress = ttk.Progressbar(left, mode="indeterminate", style="Accent.Horizontal.TProgressbar")
+        self.progress.grid(row=row, column=0, columnspan=3, sticky="ew", pady=(10, 6))
 
-        ttk.Label(main, text="Run log (last 200 lines)").grid(row=row, column=0, sticky="w", pady=(8, 2))
         row += 1
-        self.log_box = ScrolledText(main, height=14, wrap="word", state="disabled")
-        self.log_box.grid(row=row, column=0, columnspan=3, sticky="nsew")
-        main.rowconfigure(row, weight=1)
+        status_row = ttk.Frame(left, style="Card.TFrame")
+        status_row.grid(row=row, column=0, columnspan=3, sticky="w", pady=(4, 0))
+        ttk.Label(status_row, text="Status", style="Card.TLabel").grid(row=0, column=0, sticky="w")
+        self.status_label = ttk.Label(status_row, textvariable=self.status_var, style="Pill.Idle.TLabel")
+        self.status_label.grid(row=0, column=1, sticky="w", padx=(8, 0))
+
+        right = ttk.Frame(main, padding=16, style="Card.TFrame")
+        right.grid(row=1, column=1, sticky="nsew")
+        right.columnconfigure(0, weight=1)
+        right.rowconfigure(2, weight=1)
+
+        ttk.Label(right, text="Activity", style="Card.Title.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(right, text="Run log (last 200 lines)", style="Card.Subtitle.TLabel").grid(
+            row=1, column=0, sticky="w", pady=(2, 8)
+        )
+
+        self.log_box = ScrolledText(
+            right,
+            height=18,
+            wrap="word",
+            state="disabled",
+            font=self.mono_font,
+            background=self._colors["log_bg"],
+            foreground=self._colors["log_fg"],
+            relief="flat",
+            borderwidth=0,
+            highlightthickness=1,
+            highlightbackground=self._colors["border"],
+            highlightcolor=self._colors["border"],
+            insertbackground=self._colors["log_fg"],
+        )
+        self.log_box.grid(row=2, column=0, sticky="nsew")
 
     def _add_browse_row(
         self,
@@ -144,9 +340,11 @@ class PipelineApp(tk.Tk):
         command: callable,
         button_text: str,
     ) -> None:
-        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=(6, 6))
-        ttk.Entry(parent, textvariable=variable).grid(row=row, column=1, sticky="ew", pady=(6, 6))
-        ttk.Button(parent, text=button_text, command=command).grid(
+        ttk.Label(parent, text=label, style="Card.TLabel").grid(row=row, column=0, sticky="w", pady=(6, 6))
+        ttk.Entry(parent, textvariable=variable, style="Modern.TEntry").grid(
+            row=row, column=1, sticky="ew", pady=(6, 6)
+        )
+        ttk.Button(parent, text=button_text, command=command, style="Secondary.TButton").grid(
             row=row, column=2, sticky="ew", padx=(8, 0), pady=(6, 6)
         )
 
@@ -283,7 +481,7 @@ class PipelineApp(tk.Tk):
                 if kind == "log":
                     self._append_log(payload)
                 elif kind == "status":
-                    self.status_var.set(payload)
+                    self._set_status(payload)
                 elif kind == "done":
                     self._handle_done(payload)
                 elif kind == "error":
@@ -293,7 +491,7 @@ class PipelineApp(tk.Tk):
         self.after(100, self._drain_queue)
 
     def _handle_done(self, payload: Mapping[str, Any]) -> None:
-        self.status_var.set(payload.get("message", "Done"))
+        self._set_status(payload.get("message", "Done"))
         self._last_output_root = payload.get("output_root")
         self._last_log_file = payload.get("log_file")
         if self._last_output_root:
@@ -304,7 +502,7 @@ class PipelineApp(tk.Tk):
         self._save_settings()
 
     def _handle_error(self, message: str) -> None:
-        self.status_var.set("Error")
+        self._set_status("Error")
         self._append_log(f"ERROR: {message}")
         self._set_running(False)
         messagebox.showerror("Pipeline error", message)
@@ -314,6 +512,12 @@ class PipelineApp(tk.Tk):
         state = "disabled" if running else "normal"
         for widget in (self.run_button,):
             widget.configure(state=state)
+        if self.progress:
+            if running:
+                self.progress.start(12)
+                self._set_status("Running...")
+            else:
+                self.progress.stop()
 
     def _append_log(self, message: str) -> None:
         self.log_box.configure(state="normal")
@@ -355,6 +559,21 @@ class PipelineApp(tk.Tk):
             SETTINGS_PATH.write_text(json.dumps(settings, indent=2), encoding="utf-8")
         except Exception:
             pass
+
+    def _status_style_for_text(self, text: str) -> str:
+        lowered = text.lower()
+        if "error" in lowered:
+            return "Pill.Error.TLabel"
+        if "running" in lowered:
+            return "Pill.Running.TLabel"
+        if "complete" in lowered or "done" in lowered:
+            return "Pill.Done.TLabel"
+        return "Pill.Idle.TLabel"
+
+    def _set_status(self, text: str) -> None:
+        self.status_var.set(text)
+        if self.status_label is not None:
+            self.status_label.configure(style=self._status_style_for_text(text))
 
     def _on_close(self) -> None:
         if not self._running:

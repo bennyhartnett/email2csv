@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "H2H UI",
+      "type": "python",
+      "request": "launch",
+      "module": "h2h_pipeline.gui_app",
+      "cwd": "${workspaceFolder}/h2h_iqx_pipeline",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/h2h_iqx_pipeline/src"
+      },
+      "console": "integratedTerminal"
+    }
+  ]
+}
