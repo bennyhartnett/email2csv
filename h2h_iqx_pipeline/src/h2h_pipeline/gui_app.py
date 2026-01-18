@@ -55,9 +55,12 @@ class PipelineApp(tk.Tk):
         self._running = False
         self._last_output_root: Path | None = None
         self._last_log_file: Path | None = None
+        self._logo_image: tk.PhotoImage | None = None
+        self._icon_image: tk.PhotoImage | None = None
 
         self._colors: dict[str, str] = {}
         self._apply_theme()
+        self._load_branding()
 
         settings = self._load_settings()
         self.config_path_var = tk.StringVar(value=settings.get("config_path", ""))
@@ -80,6 +83,28 @@ class PipelineApp(tk.Tk):
             if name in available:
                 return name
         return candidates[-1]
+
+    def _scaled_logo(self, image: tk.PhotoImage, target_height: int) -> tk.PhotoImage:
+        height = image.height()
+        if height <= target_height:
+            return image
+        scale = max(1, int(round(height / target_height)))
+        return image.subsample(scale, scale)
+
+    def _load_branding(self) -> None:
+        logo_path = _resource_path("assets/iqexchange_footer_logo.png")
+        if not logo_path.exists():
+            return
+        try:
+            image = tk.PhotoImage(file=str(logo_path))
+        except tk.TclError:
+            return
+        self._icon_image = image
+        try:
+            self.iconphoto(True, image)
+        except tk.TclError:
+            pass
+        self._logo_image = self._scaled_logo(image, target_height=36)
 
     def _apply_theme(self) -> None:
         colors = {
@@ -214,14 +239,22 @@ class PipelineApp(tk.Tk):
 
         header = ttk.Frame(main, padding=(18, 16), style="Header.TFrame")
         header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
-        header.columnconfigure(0, weight=1)
+        header.columnconfigure(1, weight=1)
 
-        ttk.Label(header, text="H2H IQX Pipeline", style="Header.Title.TLabel").grid(row=0, column=0, sticky="w")
+        text_column = 0
+        if self._logo_image is not None:
+            logo = tk.Label(header, image=self._logo_image, bg=self._colors["header"])
+            logo.grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, 12))
+            text_column = 1
+
+        ttk.Label(header, text="H2H IQX Pipeline", style="Header.Title.TLabel").grid(
+            row=0, column=text_column, sticky="w"
+        )
         ttk.Label(
             header,
             text="Build, clean, and export IQX-ready CSVs in one run.",
             style="Header.Subtitle.TLabel",
-        ).grid(row=1, column=0, sticky="w", pady=(6, 0))
+        ).grid(row=1, column=text_column, sticky="w", pady=(6, 0))
 
         left = ttk.Frame(main, padding=16, style="Card.TFrame")
         left.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
