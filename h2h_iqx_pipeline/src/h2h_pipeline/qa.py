@@ -5,6 +5,7 @@ import logging
 import pandas as pd
 
 from .models import DedupResult, ValidationReport, DiscoveryResult
+from .utils.io_helpers import ensure_dir
 
 
 logger = logging.getLogger(__name__)
@@ -23,8 +24,7 @@ def generate_report(
 ) -> Path:
     """Write a QA report summarizing the run."""
     paths_cfg = config.get("paths", {}) if isinstance(config, Mapping) else {}
-    output_root = Path(paths_cfg.get("output_root", "output"))
-    output_root.mkdir(parents=True, exist_ok=True)
+    output_root = ensure_dir(Path(paths_cfg.get("output_root", "output")))
 
     report_path = output_root / f"QA Report {run_label}.txt"
 

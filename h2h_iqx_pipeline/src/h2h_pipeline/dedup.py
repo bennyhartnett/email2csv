@@ -1,12 +1,12 @@
-from typing import Any, Callable, Mapping
-from pathlib import Path
+from typing import Any, Mapping
 
 import logging
 import pandas as pd
-import yaml
 
 from .constants import EMAIL_COLUMN, FIRST_NAME_COLUMN, LAST_NAME_COLUMN, PHONE_COLUMN, SOURCE_COLUMN, ZIP_COLUMN
 from .models import DedupResult
+from .utils.mappings import load_yaml_mapping
+from .utils.series import combine_keys, digits_only, normalize_series
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +19,12 @@ def remove_duplicates(combo_df: pd.DataFrame, config: Mapping[str, Any]) -> Dedu
     priority_map = _load_priority(config)
     working = combo_df.copy()
     working["_priority"] = working[SOURCE_COLUMN].map(priority_map).fillna(0)
-    working["_norm_email"] = _normalize_column(working, EMAIL_COLUMN, lambda v: str(v).strip().lower())
-    working["_norm_phone"] = _normalize_column(working, PHONE_COLUMN, _digits_only)
-    last = _normalize_column(working, LAST_NAME_COLUMN, lambda v: str(v).strip().lower())
-    first = _normalize_column(working, FIRST_NAME_COLUMN, lambda v: str(v).strip().lower())
-    zip_code = _normalize_column(working, ZIP_COLUMN, lambda v: str(v).strip())
-    working["_norm_name_zip"] = _combine_keys([last, first, zip_code])
+    working["_norm_email"] = normalize_series(working, EMAIL_COLUMN, lambda v: str(v).strip().lower())
+    working["_norm_phone"] = normalize_series(working, PHONE_COLUMN, digits_only)
+    last = normalize_series(working, LAST_NAME_COLUMN, lambda v: str(v).strip().lower())
+    first = normalize_series(working, FIRST_NAME_COLUMN, lambda v: str(v).strip().lower())
+    zip_code = normalize_series(working, ZIP_COLUMN, lambda v: str(v).strip())
+    working["_norm_name_zip"] = combine_keys([last, first, zip_code])
 
     working = working.sort_values(by="_priority", ascending=False).reset_index(drop=True)
 
@@ -109,37 +109,8 @@ def remove_duplicates(combo_df: pd.DataFrame, config: Mapping[str, Any]) -> Dedu
 def _load_priority(config: Mapping[str, Any]) -> Mapping[str, int]:
     mapping_cfg = config.get("mappings", {}) if isinstance(config, Mapping) else {}
     path_val = mapping_cfg.get("source_priority")
-    if not path_val:
-        return {}
-    path = Path(path_val)
-    if not path.exists():
-        return {}
-    with path.open("r", encoding="utf-8") as handle:
-        raw = yaml.safe_load(handle) or {}
+    raw = load_yaml_mapping(path_val)
     return {k: int(v) for k, v in raw.items()}
-
-
-def _digits_only(value: Any) -> str:
-    return "".join(ch for ch in str(value) if ch.isdigit())
-
-
-def _normalize_column(df: pd.DataFrame, column: str, normalizer: Callable[[Any], str]) -> pd.Series:
-    """Return a normalized string series aligned with df's index."""
-    if column in df:
-        series = df[column]
-    else:
-        series = pd.Series([""] * len(df), index=df.index, dtype=str)
-    series = series.fillna("")
-    return series.map(normalizer)
-
-
-def _combine_keys(series_list: list[pd.Series]) -> pd.Series:
-    """Join multiple key columns, returning empty when all components are blank."""
-    frame = pd.concat(series_list, axis=1)
-    combined = frame.astype(str).agg("|".join, axis=1)
-    has_any = (frame != "").any(axis=1)
-    combined[~has_any] = ""
-    return combined
 
 
 def _format_sources(sources: set[str], priority_map: Mapping[str, int]) -> str:

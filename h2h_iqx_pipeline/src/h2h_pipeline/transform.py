@@ -1,10 +1,8 @@
 from datetime import timedelta
-from pathlib import Path
 from typing import Any, Dict, Mapping, Set
 
 import logging
 import pandas as pd
-import yaml
 from dateutil.relativedelta import relativedelta
 
 from .constants import (
@@ -30,7 +28,8 @@ from .constants import (
     ZIP_COLUMN,
 )
 from .models import TransformResult, ValidationReport
-from .utils.dates import parse_date, parse_month
+from .utils.dates import parse_date, parse_month, resolve_run_date_value
+from .utils.mappings import load_yaml_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -146,17 +145,7 @@ def _load_mappings(config: Mapping[str, Any]) -> Dict[str, Dict[str, str]]:
     result: Dict[str, Dict[str, str]] = {}
     mapping_cfg = config.get("mappings", {}) if isinstance(config, Mapping) else {}
     for key in ("professions", "service_branches", "source_priority"):
-        path_val = mapping_cfg.get(key)
-        if not path_val:
-            result[key] = {}
-            continue
-        path = Path(path_val)
-        if not path.exists():
-            logger.warning("Mapping file %s missing", path)
-            result[key] = {}
-            continue
-        with path.open("r", encoding="utf-8") as handle:
-            result[key] = yaml.safe_load(handle) or {}
+        result[key] = load_yaml_mapping(mapping_cfg.get(key), logger)
     return result
 
 
@@ -226,11 +215,9 @@ def _compute_dates(base_date: pd.Timestamp, defaults: Mapping[str, Any], date_fo
 
 
 def _resolve_base_date(month: str, df: pd.DataFrame, config: Mapping[str, Any]) -> pd.Timestamp:
-    run_cfg = config.get("run", {}) if isinstance(config, Mapping) else {}
-    for key in ("output_date", "current_date", "run_date"):
-        raw = run_cfg.get(key)
-        if raw:
-            return pd.Timestamp(parse_date(str(raw)))
+    configured = resolve_run_date_value(config)
+    if configured:
+        return pd.Timestamp(parse_date(configured))
 
     if CREATE_DATE_COLUMN in df.columns:
         series = pd.to_datetime(df[CREATE_DATE_COLUMN], errors="coerce")

@@ -6,6 +6,7 @@ import pandas as pd
 from . import dedup, export, file_discovery, ingestion, qa, transform
 from .constants import CREATE_DATE_COLUMN, SOURCE_COLUMN
 from .logging_config import configure_logging
+from .utils.dates import resolve_run_date_value
 
 
 def run_pipeline(month: str, input_root: Path, config: Mapping[str, Any]) -> None:
@@ -61,11 +62,9 @@ def _counts_by_source(df):
 
 
 def _resolve_run_label(month: str, raw_data: Mapping[str, pd.DataFrame], config: Mapping[str, Any]) -> str:
-    run_cfg = config.get("run", {}) if isinstance(config, Mapping) else {}
-    for key in ("output_date", "current_date", "run_date"):
-        value = run_cfg.get(key)
-        if value:
-            return str(value)
+    configured = resolve_run_date_value(config)
+    if configured:
+        return configured
 
     latest = _latest_create_date(raw_data)
     if latest is not None:

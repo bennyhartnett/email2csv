@@ -11,4 +11,7 @@ Helper shell scripts for development and execution.
 - `format.sh`  
   Runs code formatters (e.g., black, isort) if configured.
 
+- `build_windows_exe.ps1`  
+  Builds a Windows GUI executable with PyInstaller.
+
 These scripts are optional convenience tools. You can call the Python entry points directly instead.

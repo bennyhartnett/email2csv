@@ -4,6 +4,7 @@ from typing import Any, Dict, Mapping
 import logging
 import pandas as pd
 
+from .utils.io_helpers import ensure_dir
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +18,7 @@ def write_outputs(
     continues so the prototype remains runnable.
     """
     paths_cfg = config.get("paths", {}) if isinstance(config, Mapping) else {}
-    output_root = Path(paths_cfg.get("output_root", "output"))
-    output_root.mkdir(parents=True, exist_ok=True)
+    output_root = ensure_dir(Path(paths_cfg.get("output_root", "output")))
 
     column_order = config.get("iqx_import", {}).get("column_order", [])
     combo_excel_df = _reorder_columns(combo_df, column_order, keep_extra=True)

@@ -19,6 +19,7 @@ from .constants import (
     ZIP_COLUMN,
 )
 from .models import DiscoveryResult
+from .utils.series import combine_keys, digits_only, normalize_series
 
 
 logger = logging.getLogger(__name__)
@@ -253,23 +254,23 @@ def _filter_previously_imported(frames: Dict[str, pd.DataFrame]) -> Dict[str, pd
     if previous_df is None or previous_df.empty:
         return frames
 
-    prev_email = set(_normalize_series(previous_df, EMAIL_COLUMN, lambda v: str(v).strip().lower()))
-    prev_phone = set(_normalize_series(previous_df, PHONE_COLUMN, _digits_only))
-    last = _normalize_series(previous_df, LAST_NAME_COLUMN, lambda v: str(v).strip().lower())
-    first = _normalize_series(previous_df, FIRST_NAME_COLUMN, lambda v: str(v).strip().lower())
-    zip_code = _normalize_series(previous_df, ZIP_COLUMN, lambda v: str(v).strip())
-    prev_name_zip = set(_combine_keys(last, first, zip_code))
+    prev_email = set(normalize_series(previous_df, EMAIL_COLUMN, lambda v: str(v).strip().lower()))
+    prev_phone = set(normalize_series(previous_df, PHONE_COLUMN, digits_only))
+    last = normalize_series(previous_df, LAST_NAME_COLUMN, lambda v: str(v).strip().lower())
+    first = normalize_series(previous_df, FIRST_NAME_COLUMN, lambda v: str(v).strip().lower())
+    zip_code = normalize_series(previous_df, ZIP_COLUMN, lambda v: str(v).strip())
+    prev_name_zip = set(combine_keys([last, first, zip_code]))
 
     filtered: Dict[str, pd.DataFrame] = {"_previous_combo": previous_df}
     for source_name, df in frames.items():
         if source_name.startswith("_previous"):
             continue
-        email = _normalize_series(df, EMAIL_COLUMN, lambda v: str(v).strip().lower())
-        phone = _normalize_series(df, PHONE_COLUMN, _digits_only)
-        last = _normalize_series(df, LAST_NAME_COLUMN, lambda v: str(v).strip().lower())
-        first = _normalize_series(df, FIRST_NAME_COLUMN, lambda v: str(v).strip().lower())
-        zip_code = _normalize_series(df, ZIP_COLUMN, lambda v: str(v).strip())
-        name_zip = _combine_keys(last, first, zip_code)
+        email = normalize_series(df, EMAIL_COLUMN, lambda v: str(v).strip().lower())
+        phone = normalize_series(df, PHONE_COLUMN, digits_only)
+        last = normalize_series(df, LAST_NAME_COLUMN, lambda v: str(v).strip().lower())
+        first = normalize_series(df, FIRST_NAME_COLUMN, lambda v: str(v).strip().lower())
+        zip_code = normalize_series(df, ZIP_COLUMN, lambda v: str(v).strip())
+        name_zip = combine_keys([last, first, zip_code])
 
         mask = (~email.isin(prev_email)) & (~phone.isin(prev_phone)) & (~name_zip.isin(prev_name_zip))
         dropped = (~mask).sum()
@@ -279,23 +280,3 @@ def _filter_previously_imported(frames: Dict[str, pd.DataFrame]) -> Dict[str, pd
 
     return filtered
 
-
-def _normalize_series(df: pd.DataFrame, column: str, normalizer) -> pd.Series:
-    if column in df.columns:
-        series = df[column]
-    else:
-        series = pd.Series([""] * len(df), index=df.index, dtype=str)
-    series = series.fillna("")
-    return series.map(normalizer)
-
-
-def _digits_only(value: Any) -> str:
-    return "".join(ch for ch in str(value) if ch.isdigit())
-
-
-def _combine_keys(last: pd.Series, first: pd.Series, zip_code: pd.Series) -> pd.Series:
-    frame = pd.concat([last, first, zip_code], axis=1)
-    combined = frame.astype(str).agg("|".join, axis=1)
-    has_any = (frame != "").any(axis=1)
-    combined[~has_any] = ""
-    return combined

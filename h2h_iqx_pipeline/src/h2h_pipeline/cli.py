@@ -39,7 +39,10 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        config = load_config(args.config)
+        config = load_config(
+            args.config,
+            overrides={"paths": {"input_root": str(args.input_root)}},
+        )
         run_pipeline(
             month=args.month,
             input_root=args.input_root,

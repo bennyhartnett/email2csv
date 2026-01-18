@@ -66,6 +66,32 @@ This repository contains a Python prototype for automating the offline portion o
 
 ---
 
+## GUI (Windows)
+
+For non-technical users, run the Tkinter app with folder pickers:
+
+```bash
+python -m h2h_pipeline.gui_app
+```
+
+The GUI lets you select the config file, input root folder, output folder, and month.
+If the output folder is left blank, it defaults to `<input_root>/output`.
+Logs are written to `<output_root>/logs/pipeline.log`.
+
+---
+
+## Build a one-click Windows app (PyInstaller)
+
+From `h2h_iqx_pipeline/`, run:
+
+```powershell
+.\scripts\build_windows_exe.ps1
+```
+
+The executable will be in `dist/H2H IQX Pipeline/`.
+
+---
+
 ## Repository layout
 
 - `config/` – Configuration and mapping files (YAML).
