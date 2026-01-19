@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>H2H IQX Pipeline</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="no-api">
+    <div class="app">
+      <header class="hero">
+        <div class="hero-brand">
+          <img
+            src="../assets/iqexchange_footer_logo.png"
+            alt="IQX"
+            class="hero-logo"
+          />
+          <div>
+            <p class="hero-kicker">Embedded WebView</p>
+            <h1>H2H IQX Pipeline</h1>
+            <p class="hero-subtitle">
+              Build, clean, and export IQX-ready CSVs in one run.
+            </p>
+          </div>
+        </div>
+        <div class="hero-status">
+          <span class="status-label">Status</span>
+          <span id="statusPill" class="status-pill idle">Idle</span>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="card">
+          <div class="card-header">
+            <h2>Run configuration</h2>
+            <p>Select your config and data folders, then pick a month.</p>
+          </div>
+
+          <div class="fields">
+            <div class="field">
+              <label for="configPath">Config file</label>
+              <div class="field-row">
+                <input id="configPath" type="text" placeholder="config/local_config.yml" />
+                <button id="configBrowse" class="btn ghost">Browse</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="inputRoot">Input root folder</label>
+              <div class="field-row">
+                <input id="inputRoot" type="text" placeholder="C:\Vet Talents" />
+                <button id="inputBrowse" class="btn ghost">Browse</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="outputRoot">Output folder</label>
+              <div class="field-row">
+                <input id="outputRoot" type="text" placeholder="C:\Vet Talents\output" />
+                <button id="outputBrowse" class="btn ghost">Browse</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="month">Month (YYYY-MM)</label>
+              <input id="month" type="text" placeholder="2025-12" />
+            </div>
+          </div>
+
+          <div class="progress">
+            <div class="progress-bar"></div>
+          </div>
+
+          <div class="actions">
+            <button id="runButton" class="btn primary">Run pipeline</button>
+            <button id="openOutputButton" class="btn ghost" disabled>
+              Open output folder
+            </button>
+            <button id="openLogButton" class="btn ghost" disabled>
+              Open log file
+            </button>
+          </div>
+
+          <p class="helper">
+            If output is blank, it defaults to <code>&lt;input_root&gt;\output</code>.
+          </p>
+        </section>
+
+        <section class="card log-card">
+          <div class="card-header">
+            <h2>Activity</h2>
+            <p>Run log (tail shows the latest 200 lines).</p>
+          </div>
+          <div id="logOutput" class="log-output" aria-live="polite"></div>
+        </section>
+      </main>
+
+      <div id="noApi" class="no-api-card">
+        This interface must run inside the desktop app.
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
