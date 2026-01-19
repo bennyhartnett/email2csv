@@ -42,8 +42,17 @@ def _tail_lines(path: Path, limit: int = 200) -> list[str]:
 
 
 def _open_path(path: Path) -> None:
-    if sys.platform.startswith("win") and hasattr(os, "startfile"):
-        os.startfile(str(path))  # type: ignore[attr-defined]
+    if sys.platform.startswith("win"):
+        try:
+            if hasattr(os, "startfile"):
+                os.startfile(str(path))  # type: ignore[attr-defined]
+                return
+        except OSError:
+            pass
+        if path.is_file():
+            subprocess.run(["notepad.exe", str(path)], check=False)
+        else:
+            subprocess.run(["explorer.exe", str(path)], check=False)
     elif sys.platform == "darwin":
         subprocess.run(["open", str(path)], check=False)
     else:

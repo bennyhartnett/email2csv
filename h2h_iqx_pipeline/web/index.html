@@ -3,44 +3,60 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>H2H IQX Pipeline</title>
+    <title>TIM - Talent Intake Manager</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body class="no-api">
-    <div class="app">
-      <header class="hero">
-        <div class="hero-brand">
-          <img
-            src="../assets/iqexchange_footer_logo.png"
-            alt="IQX"
-            class="hero-logo"
-          />
-          <div>
-            <p class="hero-kicker">Embedded WebView</p>
-            <h1>H2H IQX Pipeline</h1>
-            <p class="hero-subtitle">
-              Build, clean, and export IQX-ready CSVs in one run.
-            </p>
+  <body class="no-api" data-stage="idle">
+    <div class="wrap">
+      <header class="topbar">
+        <div class="title">
+          <div class="title-row">
+            <img
+              src="../assets/iqexchange_footer_logo.png"
+              alt="IQX"
+              class="logo"
+            />
+            <div>
+              <p class="kicker">Talent Intake Manager</p>
+              <h1>TIM</h1>
+              <p class="subtitle">H2H IQX pipeline for IQX-ready CSVs.</p>
+            </div>
           </div>
+          <p class="subline before">
+            Configure the run, then process the files.
+          </p>
+          <p class="subline after">
+            Outputs are ready. Open the folder and upload the CSV in IQX.
+          </p>
         </div>
-        <div class="hero-status">
+        <div class="status-block">
           <span class="status-label">Status</span>
-          <span id="statusPill" class="status-pill idle">Idle</span>
+          <span id="statusPill" class="pill idle">Idle</span>
         </div>
       </header>
 
-      <main class="content">
-        <section class="card">
-          <div class="card-header">
+      <div class="grid">
+        <section class="panel main" aria-label="Main">
+          <div class="stepbar" aria-label="Progress">
+            <span class="step" data-step="config">1 Configure</span>
+            <span class="step" data-step="process">2 Process</span>
+            <span class="step" data-step="export">3 Output</span>
+          </div>
+
+          <div class="panel-block">
             <h2>Run configuration</h2>
-            <p>Select your config and data folders, then pick a month.</p>
+            <p class="hint">Select your config and data folders, then pick a month.</p>
           </div>
 
           <div class="fields">
             <div class="field">
               <label for="configPath">Config file</label>
               <div class="field-row">
-                <input id="configPath" type="text" placeholder="config/local_config.yml" />
+                <input
+                  id="configPath"
+                  type="text"
+                  placeholder="config/local_config.yml"
+                />
                 <button id="configBrowse" class="btn ghost">Browse</button>
               </div>
             </div>
@@ -56,7 +72,11 @@
             <div class="field">
               <label for="outputRoot">Output folder</label>
               <div class="field-row">
-                <input id="outputRoot" type="text" placeholder="C:\Vet Talents\output" />
+                <input
+                  id="outputRoot"
+                  type="text"
+                  placeholder="C:\Vet Talents\output"
+                />
                 <button id="outputBrowse" class="btn ghost">Browse</button>
               </div>
             </div>
@@ -71,6 +91,40 @@
             <div class="progress-bar"></div>
           </div>
 
+          <div class="callout">
+            <div class="t">What you will get</div>
+            <div class="d">
+              IQX CSV, Combo Excel, Dups Removed Excel, and a QA report.
+            </div>
+          </div>
+
+          <div class="callout tip before">
+            <div class="t">Tip</div>
+            <div class="d">
+              If you are unsure which files to use, select all attachments for
+              the month.
+            </div>
+          </div>
+
+          <div class="callout tip after">
+            <div class="t">Next</div>
+            <div class="d">
+              Upload the CSV in IQX, then keep the QA report for records.
+            </div>
+          </div>
+
+          <div class="panel-block">
+            <h3>Activity</h3>
+            <p class="hint">Run log (tail shows the latest 200 lines).</p>
+            <div id="logOutput" class="log-output" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <aside class="panel side" aria-label="Next action">
+          <h3>Next action</h3>
+          <p class="hint before">Review settings and run the pipeline.</p>
+          <p class="hint after">Outputs ready. Use the buttons below.</p>
+
           <div class="actions">
             <button id="runButton" class="btn primary">Run pipeline</button>
             <button id="openOutputButton" class="btn ghost" disabled>
@@ -81,19 +135,23 @@
             </button>
           </div>
 
-          <p class="helper">
-            If output is blank, it defaults to <code>&lt;input_root&gt;\output</code>.
-          </p>
-        </section>
-
-        <section class="card log-card">
-          <div class="card-header">
-            <h2>Activity</h2>
-            <p>Run log (tail shows the latest 200 lines).</p>
+          <div class="kv-list">
+            <div class="kv">
+              <span>Output folder</span>
+              <span id="outputPathLabel" class="mono">Not ready</span>
+            </div>
+            <div class="kv">
+              <span>Log file</span>
+              <span id="logPathLabel" class="mono">Not ready</span>
+            </div>
           </div>
-          <div id="logOutput" class="log-output" aria-live="polite"></div>
-        </section>
-      </main>
+
+          <div class="callout">
+            <div class="t">Operator checklist</div>
+            <div class="d">1) Run pipeline 2) Upload in IQX 3) Save report.</div>
+          </div>
+        </aside>
+      </div>
 
       <div id="noApi" class="no-api-card">
         This interface must run inside the desktop app.

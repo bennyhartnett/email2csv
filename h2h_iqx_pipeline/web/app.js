@@ -11,6 +11,8 @@ const elements = {
   outputBrowse: document.getElementById("outputBrowse"),
   statusPill: document.getElementById("statusPill"),
   logOutput: document.getElementById("logOutput"),
+  outputPathLabel: document.getElementById("outputPathLabel"),
+  logPathLabel: document.getElementById("logPathLabel"),
 };
 
 let api = null;
@@ -24,6 +26,8 @@ function setRunning(running) {
   elements.runButton.disabled = running;
   elements.openOutputButton.disabled = running || !lastOutputRoot;
   elements.openLogButton.disabled = running || !lastLogFile;
+  updateStage(running);
+  updatePathLabels();
 }
 
 function statusClass(text) {
@@ -36,7 +40,22 @@ function statusClass(text) {
 
 function setStatus(text) {
   elements.statusPill.textContent = text;
-  elements.statusPill.className = `status-pill ${statusClass(text)}`;
+  elements.statusPill.className = `pill ${statusClass(text)}`;
+}
+
+function updateStage(running) {
+  const stage = running ? "running" : lastOutputRoot ? "done" : "idle";
+  document.body.dataset.stage = stage;
+  document.body.classList.toggle("state-ready", stage === "done");
+}
+
+function updatePathLabels() {
+  if (elements.outputPathLabel) {
+    elements.outputPathLabel.textContent = lastOutputRoot || "Not ready";
+  }
+  if (elements.logPathLabel) {
+    elements.logPathLabel.textContent = lastLogFile || "Not ready";
+  }
 }
 
 function appendLog(message) {
@@ -206,10 +225,30 @@ function attachHandlers() {
   elements.openLogButton.addEventListener("click", openLog);
 }
 
+let initAttempts = 0;
+const maxInitAttempts = 50;
+const initRetryDelayMs = 200;
+
+function scheduleInitRetry() {
+  if (api || initAttempts >= maxInitAttempts) return;
+  initAttempts += 1;
+  window.setTimeout(() => {
+    if (api) return;
+    if (window.pywebview?.api) {
+      init();
+    } else {
+      scheduleInitRetry();
+    }
+  }, initRetryDelayMs);
+}
+
 async function init() {
   if (api) return;
   api = window.pywebview?.api;
-  if (!api) return;
+  if (!api) {
+    scheduleInitRetry();
+    return;
+  }
   document.body.classList.remove("no-api");
   const state = await api.get_state();
   elements.configPath.value = state.config_path || "";
@@ -227,9 +266,14 @@ async function init() {
   setInterval(pollUpdates, 300);
 }
 
-document.addEventListener("pywebviewready", init);
-window.addEventListener("DOMContentLoaded", () => {
-  if (window.pywebview) {
+function boot() {
+  if (window.pywebview?.api) {
     init();
+  } else {
+    scheduleInitRetry();
   }
-});
+}
+
+document.addEventListener("pywebviewready", init);
+window.addEventListener("pywebviewready", init);
+window.addEventListener("DOMContentLoaded", boot);
