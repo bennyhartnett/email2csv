@@ -4,10 +4,23 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 .venv/
 venv/
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Generated pipeline output
+output/
+logs/
+excel_example_run_*/
 
 # Editors
 .vscode/
